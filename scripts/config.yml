@@ -1,0 +1,9 @@
+# Application configuration
+PREFIX_FOR_EMBEDDING: "ANSWER: "
+MODEL_FILE: "scripts/models/matts_preferences.pkl"
+
+RAW_WORDLIST:  "data/raw/raw_wordlist.json"
+
+# OUPUT
+SCORED_WORDLIST: "data/matts_wordlist/scored_wordlist.json"
+SORTED_WORDLIST: "data/matts_wordlist/sorted_wordlist.json"
