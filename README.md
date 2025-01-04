@@ -4,7 +4,7 @@
 
 **[► Download the Wordlist (TXT)](PLACEHOLDER_LINK_TXT)**
 
-Welcome to the **Puzzle Constructor Wordlist** repository! This project provides a curated collection of words (originally ~130K, manually reduced and refined to ~24K) to help in creating crossword puzzles or other word-based puzzles. Additionally, it includes scripts and tools for scoring and filtering these words according to custom criteria.
+Welcome to the **Puzzle Constructor Wordlist** repository! This project provides a curated collection of words (originally ~130K, manually reduced and refined to ~120K) to help in creating crossword puzzles or other word-based puzzles. Additionally, it includes scripts and tools for scoring and filtering wordlists according to custom criteria.
 
 ## Table of Contents
 1. [Project Description](#project-description)  
@@ -15,29 +15,44 @@ Welcome to the **Puzzle Constructor Wordlist** repository! This project provides
 
 ---
 
+## Whats in this Repo?
+
+- A scored wordlist of 120,000 words.
+- An AI/ML model that scores words (using embedding models and SVMs).
+- A tool for searching clues for wordlist items, and labeling data.
+- A tool for training these scoring models based on your preferences.
+
+
 ## Project Description
 
-This collection of words was assembled by gathering various online wordlists, including but not limited to:
-- **Source 1**  
-- **Source 2**  
-- _Other sources whose names I forgot_
+### Initial Wordlist Candidate Set 
 
-### Manual Sorting
-- Initially started with ~130K words.
-- Manually approved ~24K words and removed ~10K words over the course of tens of hours.
-- A custom tool (not included in this repo) allowed for rapid manual sorting:
-  - Presented ~5 possible clues for each candidate word.
-  - Gave the option to **accept**, **reject**, or **abstain**.
-  - Integrated a quick search (e.g., Google) to research unknown words.
-- While this effort greatly improved the list, unfamiliar or undesirable words still appear from time to time.
+I formed an initial wordlist from various online wordlists, including but not limited to:
+- [**Chris Jones Wordlist**](https://github.com/christophsjones/crossword-wordlist)
+- [**Spread the Word(list)**](https://www.spreadthewordlist.com/)
 
-### Model-Based Scoring
-- After manual curation, an SVM model was trained to predict whether a new word would be acceptable.
-- The process involves creating embeddings for each word using an OpenAI embedding model:
-  1. Convert a word (e.g., `"HOUSE"`) into a longer prompt (e.g., `"ANSWER: HOUSE"`).
-  2. Generate an embedding vector (≈1500 dimensions).
-  3. Pass this vector into a **pretrained SVM** (saved as a pickle file).
-- **Note:** The script for training the SVM itself and the manual sorting tool are not yet included in this repository.
+A main problem was that these souces contained words and phrases that I would otherwise choose not to use. These bad-answers  were difficult to indentify efficiently and remove since the intial wordlist contained ~130K words.
+
+### Labeling Words to Match my Preferences
+
+I then built a tool for manually approving or rejecting words (from a final wordlist). The tool allows one to google the phrase and look at common clues from [**Crossword Tracker**](https://crosswordtracker.com/).
+
+![Alt text](public/api_sort.png)
+
+Using this tool, I sorted approximately ~35K words by hand:
+- about ~24K were manually marked as approved words that I would be happy to put in a crossword puzzle, and
+- about ~10K were removed from the wordlist entirely. These rejected words are now stored only in [INSERT]
+
+_Note: This process took 10s of hours. While this effort greatly improved the list, unfamiliar or undesirable words still appear from time to time._
+
+
+### Training a Model on my Preferences 
+After manual curation, an AI/ML model was trained to predict whether a new word would be acceptable. This is done in the following way:
+- A training and test set were formed from the 35K labeled words, where every word (e.g., `"HOUSE"`) was put into a longer prompt (e.g., `"ANSWER: HOUSE"`).
+- These prompts were then passed through an embedding model (transformer) to form a ≈1500 dimentional vector for each intial word. 
+- Finally, a Support Vector Machine (SVM) was trained on the output of the embedding model. This SVM is stored as a pickle file in the repo and facilitates the on the fly scoring of new words. 
+
+_Note: The script for training the SVM itself and the manual sorting tool are not yet included in this repository._
 
 ---
 
