@@ -1,6 +1,6 @@
 # Wordlist for Puzzle Construction
 
-**[► Download the Wordlist (JSON)](https://github.com/USERNAME/REPO/blob/main/wordlist/data/matts_wordlist/scored_wordlist.json)**
+**[► Download the Wordlist (JSON)](https://github.com/mattabate/wordlist/blob/init/data/matts_wordlist/scored_wordlist.json)**
 
 **[► Download the Wordlist (TXT)](PLACEHOLDER_LINK_TXT)**
 
