@@ -1,12 +1,14 @@
+"""score the words in the wordlist using a pretrained SVM model"""
+
 import json
 from models.svm import infer
 import yaml
 
 with open("scripts/config.yml") as file:
     config = yaml.safe_load(file)
-    RAW_WORDLIST = config["RAW_WORDLIST"]
-    SCORED_WORDLIST = config["SCORED_WORDLIST"]
-    SORTED_WORDLIST = config["SORTED_WORDLIST"]
+    RAW_WORDLIST = config["generate_scored_wordlist"]["RAW_WORDLIST"]
+    SCORED_WORDLIST = config["generate_scored_wordlist"]["SCORED_WORDLIST"]
+    SORTED_WORDLIST = config["generate_scored_wordlist"]["SORTED_WORDLIST"]
 
 if __name__ == "__main__":
     with open(RAW_WORDLIST) as file:
