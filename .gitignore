@@ -9,3 +9,4 @@ pyproject.toml
 # Poetry files
 poetry.lock
 
+*.pkl

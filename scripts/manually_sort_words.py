@@ -183,6 +183,7 @@ class WordSortingApp(QWidget):
         self.current_word = word
 
         if word in self.words_seen:
+            remove_from_json(WORDLIST_SOURCE, word)
             self.word_index += 1
             self.process_next_word()
             return
