@@ -26,7 +26,7 @@ with open(PKL_MODL, "rb") as file:
 
 def infer(words: list[str]) -> list[tuple[str, float]]:
     """Return a sorted list of tuples of words and their corresponding scores, from most assumed good to most assumed bad."""
-    _step = 1000  # Smaller chunk size for better progress tracking
+    _step = 1500  # Smaller chunk size for better progress tracking
     words_considered = [EMB_PREF + w for w in words]
     word_scores = []
 
