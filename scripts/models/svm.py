@@ -15,8 +15,8 @@ EMB_MODL = os.getenv("EMB_MODL")
 # EMB_PREF should actually come from the config file yaml
 with open("scripts/config.yml") as file:
     config = yaml.safe_load(file)
-    EMB_PREF = config["PREFIX_FOR_EMBEDDING"]
-    PKL_MODL = config["MODEL_FILE"]
+    EMB_PREF = config["model"]["PREFIX_FOR_EMBEDDING"]
+    PKL_MODL = config["model"]["MODEL_FILE"]
 
 client = OpenAI()
 
