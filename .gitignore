@@ -1,0 +1,12 @@
+# Python-specific ignores
+__pycache__/
+*.pyc
+pyproject.toml
+
+# Environment files
+.env
+
+# Poetry files
+poetry.lock
+
+*.pkl
