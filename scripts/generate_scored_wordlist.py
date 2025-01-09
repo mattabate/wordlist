@@ -1,8 +1,9 @@
 """score the words in the wordlist using a pretrained SVM model"""
 
 import json
-from models.svm import infer
 import yaml
+
+from models.svm import infer
 
 with open("scripts/config.yml") as file:
     config = yaml.safe_load(file)
