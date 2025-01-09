@@ -4,7 +4,15 @@
 
 **[► Download the Wordlist (TXT)](PLACEHOLDER_LINK_TXT)**
 
-Welcome to the **Puzzle Constructor Wordlist** repository! This project provides a curated collection of words (originally ~130K, manually reduced and refined to ~120K) to help in creating crossword puzzles or other word-based puzzles. Additionally, it includes scripts and tools for scoring and filtering wordlists according to custom criteria.
+Welcome to my **Puzzle Constructor Wordlist** repository! This project provides a curated collection of words to help in creating crossword puzzles or other word-based puzzles. Additionally, it includes scripts and tools for scoring and filtering wordlists according to custom criteria.
+
+## Whats in this Repo?
+
+- A scored wordlist of 120,000 words.
+- A pretrained AI/ML model that scores words (based on my preferences).  
+- A script for for training your own AI/ML models based on your preferences (you'll need examples of words you do and don't like). 
+- A tool for quickly labeling training data, that allows you to see real published clues for the words in your wordlist. 
+
 
 ## Table of Contents
 1. [Project Description](#project-description)  
@@ -14,14 +22,6 @@ Welcome to the **Puzzle Constructor Wordlist** repository! This project provides
 5. [License & Credits](#license--credits)
 
 ---
-
-## Whats in this Repo?
-
-- A scored wordlist of 120,000 words.
-- An AI/ML model that scores words (using embedding models and SVMs).
-- A tool for searching clues for wordlist items, and labeling data.
-- A tool for training these scoring models based on your preferences.
-
 
 ## Project Description
 
@@ -41,9 +41,10 @@ I then built a tool for manually approving or rejecting words (from a final word
 
 Using this tool, I sorted approximately ~35K words by hand:
 - about ~24K were manually marked as approved words that I would be happy to put in a crossword puzzle, and
-- about ~10K were removed from the wordlist entirely. These rejected words are now stored only in [INSERT]
+- about ~10K were removed from the wordlist entirely. These rejected words are now only stored in
+**[this file](https://github.com/mattabate/wordlist/blob/main/data/raw/rejected.json)**.
 
-_Note: This process took 10s of hours. While this effort greatly improved the list, unfamiliar or undesirable words still appear from time to time._
+_Note: This process took 10s of hours. While this effort greatly improved the list, unfamiliar or undesirable words still appear regularly._
 
 
 ### Training a Model on my Preferences 
