@@ -30,3 +30,12 @@ train_svm:
 model:
   MODEL_FILE: "scripts/models/matts_preferences.pkl"
   PREFIX_FOR_EMBEDDING: "ANSWER: "
+
+
+create_db:
+  RAW_WORDLIST: "data/raw/raw_wordlist.json"
+  SCORED_WORDLIST: "data/matts_wordlist/scored_wordlist.json"
+  WORDS_APPROVED: "data/raw/approved.json"
+  WORDS_REJECTED: "data/raw/rejected.json"
+
+  DATABASE_FILE: "wordlist.db" # file that is saved to
