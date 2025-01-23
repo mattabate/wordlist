@@ -13,3 +13,5 @@ poetry.lock
 
 *.db
 *.db-journal
+
+/other_projects/
