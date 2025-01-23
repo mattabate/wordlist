@@ -4,6 +4,7 @@ import json
 import yaml
 
 from models.svm import infer
+import utils.printing
 
 with open("scripts/config.yml") as file:
     config = yaml.safe_load(file)
@@ -14,6 +15,10 @@ with open("scripts/config.yml") as file:
 if __name__ == "__main__":
     with open(RAW_WORDLIST) as file:
         data = json.load(file)
+
+    print(
+        f"{utils.printing.c_yellow}Number of words:{utils.printing.c_end} {len(data)}"
+    )
 
     model_output = infer(data)
 

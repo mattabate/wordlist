@@ -1,14 +1,12 @@
 # Application configuration
 generate_scored_wordlist:
   RAW_WORDLIST:  "data/raw/raw_wordlist.json"
-  PREFIX_FOR_EMBEDDING: "ANSWER: "
-  MODEL_FILE: "scripts/models/matts_preferences.pkl"
+  MODEL_FILE: "scripts/models/saved_preferences.pkl"
   SCORED_WORDLIST: "data/matts_wordlist/scored_wordlist.json"
   SORTED_WORDLIST: "data/matts_wordlist/sorted_wordlist.json"
 
 manually_sort_words:
   RAW_WORDLIST:  "data/raw/raw_wordlist.json"
-  PREFIX_FOR_EMBEDDING: "ANSWER: "
   MODEL_FILE: "scripts/models/matts_preferences.pkl"
   WORDLIST_SOURCE: "data/inputs/manually_sort_words.json" # read file for sorting app
   WORDS_APPROVED: "data/raw/approved.json" # where approved words go
@@ -16,20 +14,17 @@ manually_sort_words:
 
 
 assess_svm:
-  MODEL_FILE: "scripts/models/matts_preferences.pkl"
-  PREFIX_FOR_EMBEDDING: "ANSWER: "
+  MODEL_FILE: "scripts/models/saved_preferences.pkl"
   WORDS_APPROVED: "data/raw/approved.json" # where approved words go
   WORDS_REJECTED: "data/raw/rejected.json" # where rejected words go
 
 train_svm:
   MODEL_FILE: "scripts/models/saved_preferences.pkl"
-  PREFIX_FOR_EMBEDDING: "I am making a crossword.  Would this be a well known answer: "
   WORDS_APPROVED: "data/raw/approved.json" # where approved words go
   WORDS_REJECTED: "data/raw/rejected.json" # where rejected words go
 
 model:
   MODEL_FILE: "scripts/models/matts_preferences.pkl"
-  PREFIX_FOR_EMBEDDING: "ANSWER: "
 
 
 create_db:

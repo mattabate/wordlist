@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
     QMessageBox,
 )
 
+from models.database import get_clues_for_word
 from models.svm import infer
 from utils.json import append_json, remove_from_json, load_json
 
@@ -190,42 +191,18 @@ class WordSortingApp(QWidget):
 
         self.word_label.setText(f"{word.upper()}")
 
-        url = f"https://crosswordtracker.com/answer/{word.lower()}/"
-
-        try:
-            response = requests.get(url, headers=self.headers, params=self.params)
-            code = response.status_code
-        except:
-            code = 1
-
-        clues_text = ""
-        if code != 200:
+        clues = get_clues_for_word(word, "wordlist.db")
+        if not clues:
             # No clues found, make the clues text box pink
             self.clues_text.setStyleSheet(
                 "background-color: #ffe6f2; border: 1px solid #ff80bf; padding: 5px;"
             )
             clues_text = f"No clues found for '{word}'."
         else:
-            time.sleep(random.uniform(0.5, 1.25))
-            soup = BeautifulSoup(response.text, "html.parser")
-            clue_container = soup.find("h3", string="Referring crossword puzzle clues")
-            clues = []
-            if clue_container:
-                clue_container = clue_container.find_next_sibling("div")
-                clues = clue_container.find_all("li")
-                clues_text = "\n".join(
-                    [f"- {clue.get_text()}" for clue in clues[: self.num_printed]]
-                )
-                # Reset clues text box style
-                self.clues_text.setStyleSheet(
-                    "background-color: #ffffff; border: 1px solid #cccccc; padding: 5px;"
-                )
-            else:
-                # No clues found, make the clues text box pink
-                self.clues_text.setStyleSheet(
-                    "background-color: #ffe6f2; border: 1px solid #ff80bf; padding: 5px;"
-                )
-                clues_text = f"No clues found for '{word}'."
+            self.clues_text.setStyleSheet(
+                "background-color: #ffffff; border: 1px solid #cccccc; padding: 5px;"
+            )
+            clues_text = clues
 
         self.clues_text.setPlainText(clues_text)
 
