@@ -7,7 +7,7 @@ generate_scored_wordlist:
 
 manually_sort_words:
   RAW_WORDLIST:  "data/raw/raw_wordlist.json"
-  MODEL_FILE: "scripts/models/matts_preferences.pkl"
+  MODEL_FILE: "scripts/models/saved_preferences.pkl"
   WORDLIST_SOURCE: "data/inputs/manually_sort_words.json" # read file for sorting app
   WORDS_APPROVED: "data/raw/approved.json" # where approved words go
   WORDS_REJECTED: "data/raw/rejected.json" # where rejected words go
@@ -24,7 +24,7 @@ train_svm:
   WORDS_REJECTED: "data/raw/rejected.json" # where rejected words go
 
 model:
-  MODEL_FILE: "scripts/models/matts_preferences.pkl"
+  MODEL_FILE: "scripts/models/saved_preferences.pkl"
 
 
 create_db:

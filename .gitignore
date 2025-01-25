@@ -11,7 +11,7 @@ poetry.lock
 
 *.pkl
 
-*.db
+# *.db
 *.db-journal
 
 /other_projects/
