@@ -1,5 +1,6 @@
 import os
 import pickle
+import random
 import time
 import tqdm
 import yaml
@@ -12,6 +13,9 @@ from openai import OpenAI
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score
+from models.database import get_clues_for_word
+
+# must import embedding
 
 # ------------------------------------------------------------------------------
 #  Initialization / Config
@@ -23,9 +27,7 @@ EMB_MODL = os.getenv("EMB_MODL")
 
 with open("scripts/config.yml") as file:
     config = yaml.safe_load(file)
-    EMB_PREF = config["model"]["PREFIX_FOR_EMBEDDING"]
     PKL_MODL = config["model"]["MODEL_FILE"]  # for loading model
-    TRAIN_EMB_PREF = config["train_svm"]["PREFIX_FOR_EMBEDDING"]
     TRAIN_PKL_MODL = config["train_svm"]["MODEL_FILE"]  # for saving model
 
 # Create OpenAI client (adjust as needed)
@@ -45,7 +47,7 @@ def infer(words: List[str]) -> List[Tuple[str, float]]:
     to most assumed bad (score low).
     """
     chunk_size = 1500
-    words_considered = [EMB_PREF + w for w in words]
+    words_considered = [add_prefix(w, get_clues_for_word(w)) for w in words]
     word_scores = []
 
     for i in tqdm.tqdm(range(0, len(words_considered), chunk_size)):
@@ -68,15 +70,28 @@ def infer(words: List[str]) -> List[Tuple[str, float]]:
     return word_scores_sorted
 
 
+def add_prefix(word: str, clues: str = "") -> str:
+
+    prompt = (
+        "I am making a wordlist for crossword puzzle constructors. "
+        + f"Do you think you would be able to guess this word '{word}' if it was used in a puzzle? "
+        + f"Respond NO if you think '{word}' is too obscure and YES if you think '{word}' is common."
+    )
+    if clues:
+        prompt = prompt + "\n\n" + "Here are some possible clues: " + "\n" + clues
+    return prompt
+
+
 # ------------------------------------------------------------------------------
 #  Embedding helper
 # ------------------------------------------------------------------------------
-def get_embeddings(words_batch: List[str]) -> List[List[float]]:
+def get_embeddings(words_batch_dict: dict[str, str]) -> List[List[float]]:
     """
     Embed a batch of words using the TRAIN_EMB_PREF prefix.
     Returns the list of embedding vectors.
     """
-    words_with_prefix = [TRAIN_EMB_PREF + w for w in words_batch]
+
+    words_with_prefix = [add_prefix(w, c) for w, c in words_batch_dict.items()]
     response = client.embeddings.create(input=words_with_prefix, model=EMB_MODL).data
     vectors = [item.embedding for item in response]
     return vectors
@@ -111,15 +126,19 @@ def make_train_test_split(
 # ------------------------------------------------------------------------------
 #  2) Embed data in chunks
 # ------------------------------------------------------------------------------
-def embed_in_chunks(words: List[str], chunk_size: int = 1500) -> List[List[float]]:
+def embed_in_chunks(
+    words_clues_dict: dict[str, str], chunk_size: int = 1500
+) -> List[List[float]]:
     """
     Embed a list of words in manageable chunks (to avoid rate limits).
     Uses the 'get_embeddings' helper under the hood.
     """
+    words = list(words_clues_dict.keys())
     vectors = []
     for i in tqdm.tqdm(range(0, len(words), chunk_size)):
         batch = words[i : i + chunk_size]
-        batch_vectors = get_embeddings(batch)
+        batch_dict = {word: words_clues_dict[word] for word in batch}
+        batch_vectors = get_embeddings(batch_dict)
         vectors.extend(batch_vectors)
         time.sleep(0.5)  # small pause to avoid rate-limit issues
     return vectors
@@ -181,7 +200,9 @@ def evaluate_model(
 # ------------------------------------------------------------------------------
 #  5) Master Train Function
 # ------------------------------------------------------------------------------
-def train_svm(approved_words: List[str], not_approved_words: List[str]) -> None:
+def train_svm(
+    approved_words_dict: List[str], not_approved_words_dict: List[str]
+) -> None:
     """
     Master function that:
     1) Makes train/test sets
@@ -190,16 +211,43 @@ def train_svm(approved_words: List[str], not_approved_words: List[str]) -> None:
     4) Evaluates the best model
     5) Saves the model
     """
+
+    _train_limit = 10000000
+
+    not_approved_words = [word for word in not_approved_words_dict]
+    approved_words = [word for word in approved_words_dict]
+    random.shuffle(not_approved_words)
+    random.shuffle(approved_words)
+
+    not_approved_words = not_approved_words[
+        : min(_train_limit, len(not_approved_words_dict))
+    ]
+    approved_words = approved_words[: min(_train_limit, len(approved_words_dict))]
+
     # -- 1) Split
     X_train_words, X_test_words, y_train, y_test = make_train_test_split(
         approved_words, not_approved_words
     )
 
+    train_dict = {}
+    for word in X_train_words:
+        if word in approved_words_dict:
+            train_dict[word] = approved_words_dict[word]
+        else:
+            train_dict[word] = not_approved_words_dict[word]
+
+    test_dict = {}
+    for word in X_test_words:
+        if word in approved_words_dict:
+            test_dict[word] = approved_words_dict[word]
+        else:
+            test_dict[word] = not_approved_words_dict[word]
+
     # -- 2) Embed training and test sets
     print("Embedding train set...")
-    X_train_vectors = embed_in_chunks(X_train_words)
+    X_train_vectors = embed_in_chunks(train_dict)
     print("Embedding test set...")
-    X_test_vectors = embed_in_chunks(X_test_words)
+    X_test_vectors = embed_in_chunks(test_dict)
 
     # -- 3) Train (grid search)
     best_clf = train_model(X_train_vectors, y_train)
