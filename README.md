@@ -48,7 +48,7 @@ _Note: This process took 10s of hours. While this effort greatly improved the li
 After manual curation, an AI/ML model was trained to predict whether a new word would be acceptable. This is done in the following way:
 - A training and test set were formed from the 35K labeled words, where every word (e.g., `"HOUSE"`) was put into a longer prompt (e.g., `"ANSWER: HOUSE"`).
 - These prompts were then passed through an embedding model (transformer) to form a ≈1500 dimentional vector for each intial word. 
-- Finally, a Support Vector Machine (SVM) was trained on the output of the embedding model. This SVM is stored as a pickle file in the repo and facilitates the on the fly scoring of new words. 
+- Finally, a Support Vector Machine (SVM) was trained on the output of the embedding model (`text-embedding-3-small`). This SVM is stored as a pickle file in the repo and facilitates the on the fly scoring of new words. 
 
 ---
 
