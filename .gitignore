@@ -10,3 +10,8 @@ pyproject.toml
 poetry.lock
 
 *.pkl
+
+# *.db
+*.db-journal
+
+/other_projects/
