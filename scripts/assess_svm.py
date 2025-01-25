@@ -6,6 +6,7 @@ Computes accuracy and prints to terminal.
 import os
 import time
 import pickle
+import random
 import yaml
 import tqdm
 
@@ -14,6 +15,9 @@ from openai import OpenAI
 from sklearn.metrics import accuracy_score
 
 import utils.json  # your custom JSON utility
+import utils.printing
+from models.svm import embed_in_chunks
+from create_db import get_clues_for_word
 
 # ------------------------------------------------------------------------------
 #  Load Configs
@@ -25,37 +29,12 @@ with open("scripts/config.yml", "r") as file:
 WORDS_APPROVED = config["assess_svm"]["WORDS_APPROVED"]
 WORDS_REJECTED = config["assess_svm"]["WORDS_REJECTED"]
 MODEL_FILE_PATH = config["assess_svm"]["MODEL_FILE"]  # SVM model (pickle file)
-TRAIN_EMB_PREF = config["assess_svm"]["PREFIX_FOR_EMBEDDING"]
 EMB_MODEL_NAME = os.getenv("EMB_MODL", "text-embedding-3-small")  # fallback
 
 # ------------------------------------------------------------------------------
 #  Create OpenAI client
 # ------------------------------------------------------------------------------
 client = OpenAI()
-
-
-# ------------------------------------------------------------------------------
-#  Embedding Helper
-# ------------------------------------------------------------------------------
-def embed_in_chunks(words, chunk_size=1500):
-    """
-    Embeds a list of words (with training prefix) in chunks to avoid rate limits.
-    Returns a list of embedding vectors.
-    """
-    vectors = []
-    for i in tqdm.tqdm(range(0, len(words), chunk_size), desc="Embedding"):
-        batch = words[i : i + chunk_size]
-        # Prepend training prefix
-        batch_prefixed = [TRAIN_EMB_PREF + w for w in batch]
-
-        response = client.embeddings.create(
-            input=batch_prefixed, model=EMB_MODEL_NAME
-        ).data
-        batch_vectors = [item.embedding for item in response]
-        vectors.extend(batch_vectors)
-
-        time.sleep(0.5)  # small pause to avoid hitting rate limits
-    return vectors
 
 
 # ------------------------------------------------------------------------------
@@ -66,13 +45,37 @@ if __name__ == "__main__":
     approved_words = utils.json.load_json(WORDS_APPROVED)
     rejected_words = utils.json.load_json(WORDS_REJECTED)
 
+    print(
+        f"{utils.printing.c_yellow}Assessing SVM Model:{utils.printing.c_end} {MODEL_FILE_PATH}"
+    )
+    print(
+        f"{utils.printing.c_yellow}Total Approved Words:{utils.printing.c_end} {len(approved_words)}"
+    )
+    print(
+        f"{utils.printing.c_yellow}Total Rejected Words:{utils.printing.c_end} {len(rejected_words)}"
+    )
     # 2) Load Trained SVM Model
     with open(MODEL_FILE_PATH, "rb") as f:
         svm_model = pickle.load(f)
 
+    _max_words = 3000  # limit to 1000 words for speed
+    print(f"{utils.printing.c_pink}max for study:{utils.printing.c_end} {_max_words}")
     # 3) Embed Approved & Rejected Words
-    approved_embeddings = embed_in_chunks(approved_words)
-    rejected_embeddings = embed_in_chunks(rejected_words)
+    random.shuffle(approved_words)
+    random.shuffle(rejected_words)
+
+    approved_words = approved_words[: min(_max_words, len(approved_words))]
+    rejected_words = rejected_words[: min(_max_words, len(rejected_words))]
+
+    approved_words_w_clues = {
+        w: get_clues_for_word(w, "wordlist.db") for w in approved_words
+    }
+    rejected_words_w_clues = {
+        w: get_clues_for_word(w, "wordlist.db") for w in rejected_words
+    }
+
+    approved_embeddings = embed_in_chunks(approved_words_w_clues)
+    rejected_embeddings = embed_in_chunks(rejected_words_w_clues)
 
     # 4) Build label arrays (1 = approved, 0 = rejected)
     y_true_approved = [1] * len(approved_words)
