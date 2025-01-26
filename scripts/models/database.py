@@ -160,3 +160,15 @@ def fetch_clues(word):
                 )
                 return clues_text
     return None
+
+
+def update_score(conn, word: str, score: int) -> int:
+    """
+    Updates the score for a given word in the 'wordlist' table.
+    Returns the number of rows that were updated (usually 0 or 1).
+    """
+    word = word.upper()  # Ensure consistency with the DB
+    cursor = conn.cursor()
+    cursor.execute("UPDATE wordlist SET scores = ? WHERE answers = ?", (score, word))
+    conn.commit()
+    return cursor.rowcount

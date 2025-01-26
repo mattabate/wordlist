@@ -1,13 +1,18 @@
 """score the words in the wordlist using a pretrained SVM model"""
 
 import json
+import sqlite3
+import tqdm
 import yaml
 
-from models.svm import infer
+import models.database
 import utils.printing
+
+from models.svm import infer
 
 with open("scripts/config.yml") as file:
     config = yaml.safe_load(file)
+    DATABASE_FILE = "wordlist.db"
     RAW_WORDLIST = config["generate_scored_wordlist"]["RAW_WORDLIST"]
     SCORED_WORDLIST = config["generate_scored_wordlist"]["SCORED_WORDLIST"]
     SORTED_WORDLIST = config["generate_scored_wordlist"]["SORTED_WORDLIST"]
@@ -44,6 +49,24 @@ if __name__ == "__main__":
             file.write(f"{word};{score}\n")
 
     # update scores in db
-    for word, score in matt_scores.items():
-        print(f"{word} {score}")
-        # update_score_in_db(word, score)
+
+    conn = sqlite3.connect(DATABASE_FILE)
+    try:
+        words = models.database.get_words(conn, status="")
+        for word in tqdm.tqdm(words):
+            if word not in matt_scores:
+                tqdm.tqdm.write(
+                    f"Word {utils.printing.c_pink}{word}{utils.printing.c_end} not in wordlist. Setting score to 0."
+                )
+                models.database.update_score(conn, word, 0)
+            else:
+                tqdm.tqdm.write(
+                    f"Updating score for {utils.printing.c_green}{word}{utils.printing.c_end} to {utils.printing.c_green}{matt_scores[word]}{utils.printing.c_end}"
+                )
+                models.database.update_score(conn, word, matt_scores[word])
+
+    except Exception as e:
+        print(f"{utils.printing.c_red}Error:{utils.printing.c_end} {e}")
+        conn.rollback()
+    finally:
+        conn.close()
