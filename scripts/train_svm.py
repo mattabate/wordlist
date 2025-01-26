@@ -6,7 +6,7 @@ import yaml
 
 from utils.printing import c_red, c_end
 from models.svm import train_svm
-from create_db import get_words
+from models.database import get_words
 
 
 def load_config(config_file):

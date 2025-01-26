@@ -11,6 +11,7 @@ with open("scripts/config.yml") as file:
     RAW_WORDLIST = config["generate_scored_wordlist"]["RAW_WORDLIST"]
     SCORED_WORDLIST = config["generate_scored_wordlist"]["SCORED_WORDLIST"]
     SORTED_WORDLIST = config["generate_scored_wordlist"]["SORTED_WORDLIST"]
+    SCORED_WORDLIST_TXT = config["generate_scored_wordlist"]["SCORED_WORDLIST_TXT"]
 
 if __name__ == "__main__":
     with open(RAW_WORDLIST) as file:
@@ -37,3 +38,12 @@ if __name__ == "__main__":
 
     with open(SORTED_WORDLIST, "w") as file:
         json.dump([w for w, _ in model_output], file, indent=4)
+
+    with open(SCORED_WORDLIST_TXT, "w") as file:
+        for word, score in matt_scores.items():
+            file.write(f"{word};{score}\n")
+
+    # update scores in db
+    for word, score in matt_scores.items():
+        print(f"{word} {score}")
+        # update_score_in_db(word, score)
