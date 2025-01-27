@@ -4,6 +4,7 @@ generate_scored_wordlist:
   MODEL_FILE: "scripts/models/saved_preferences.pkl"
   SCORED_WORDLIST: "data/matts_wordlist/scored_wordlist.json"
   SORTED_WORDLIST: "data/matts_wordlist/sorted_wordlist.json"
+  SCORED_WORDLIST_TXT: "data/matts_wordlist/matts_wordlist.txt"
 
 manually_sort_words:
   RAW_WORDLIST:  "data/raw/raw_wordlist.json"
@@ -19,7 +20,7 @@ assess_svm:
   WORDS_REJECTED: "data/raw/rejected.json" # where rejected words go
 
 train_svm:
-  MODEL_FILE: "scripts/models/saved_preferences.pkl"
+  MODEL_FILE: "scripts/models/new_preferences.pkl"
   WORDS_APPROVED: "data/raw/approved.json" # where approved words go
   WORDS_REJECTED: "data/raw/rejected.json" # where rejected words go
 
