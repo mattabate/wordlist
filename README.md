@@ -2,7 +2,7 @@
 
 **[► Download the Wordlist (JSON)](https://github.com/mattabate/wordlist/blob/main/data/matts_wordlist/scored_wordlist.json)**
 
-**[► Download the Wordlist (TXT)](PLACEHOLDER_LINK_TXT)**
+**[► Download the Wordlist (TXT)](https://github.com/mattabate/wordlist/blob/main/data/matts_wordlist/matts_wordlist.txt)**
 
 Welcome to my **Puzzle Constructor Wordlist** repository! This project provides a curated collection of words to help in creating crossword puzzles or other word-based puzzles. Additionally, it includes scripts and tools for scoring and filtering wordlists according to custom criteria.
 

@@ -17,7 +17,7 @@ from sklearn.metrics import accuracy_score
 import utils.json  # your custom JSON utility
 import utils.printing
 from models.svm import embed_in_chunks
-from create_db import get_clues_for_word
+from models.database import get_clues_for_word
 
 # ------------------------------------------------------------------------------
 #  Load Configs

@@ -1,11 +1,7 @@
 import sys
-import random
-import requests
-import time
 import webbrowser  # Added import for webbrowser
 import yaml
 
-from bs4 import BeautifulSoup
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
