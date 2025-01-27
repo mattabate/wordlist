@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     conn = sqlite3.connect(DATABASE_FILE)
     try:
-        words = models.database.get_words(conn, status="")
+        words = models.database.get_words_and_clues(conn, status="")
         for word in tqdm.tqdm(words):
             if word not in matt_scores:
                 tqdm.tqdm.write(

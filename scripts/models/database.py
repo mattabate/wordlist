@@ -100,7 +100,7 @@ def get_clues_for_word(word: str, db_path: str = DATABASE_FILE) -> str:
         conn.close()
 
 
-def get_words(conn, status=""):
+def get_words_and_clues(conn, status=""):
     """
     Fetches words and their clues from the database filtered by status.
     If no status is provided, it fetches all words.
@@ -115,6 +115,23 @@ def get_words(conn, status=""):
 
     rows = cur.fetchall()
     return {answer: clues for answer, clues in rows}
+
+
+def get_words(conn, status=""):
+    """
+    Fetches words and their clues from the database filtered by status.
+    If no status is provided, it fetches all words.
+    """
+    cur = conn.cursor()
+    if status:
+        query = "SELECT answers FROM wordlist WHERE status = ?;"
+        cur.execute(query, (status,))
+    else:
+        query = "SELECT answers FROM wordlist;"
+        cur.execute(query)
+
+    rows = cur.fetchall()
+    return [answer for answer, in rows]
 
 
 _NUM_CLUES = 6
@@ -172,3 +189,195 @@ def update_score(conn, word: str, score: int) -> int:
     cursor.execute("UPDATE wordlist SET scores = ? WHERE answers = ?", (score, word))
     conn.commit()
     return cursor.rowcount
+
+
+def add_source(
+    conn: sqlite3.Connection, name: str, source_link: str, file_path: str
+) -> int:
+    """
+    Attempts to add a new source to the 'sources' table, returning the row's primary key in three cases:
+      1) If no row matches exactly (name, source, file), a new row is inserted and the new ID returned.
+      2) If an existing row already matches exactly (name, source, file), return that row's ID (no insert).
+      3) If there's a uniqueness conflict but not an exact match, raise an error.
+
+    :param conn: Active sqlite3.Connection object
+    :param name:    The descriptive name of the source (<= 50 chars, unique)
+    :param source_link: The link or identifier for the source (<= 50 chars, unique)
+    :param file_path:   The local file path for this source (<= 50 chars, unique)
+    :return: An int representing the ID of the row in 'sources'
+    :raises ValueError: If a uniqueness conflict is triggered (partial match).
+    """
+
+    # STEP 1: Check if an exact match already exists
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT id FROM sources
+        WHERE name = ?
+          AND source = ?
+          AND file = ?
+        """,
+        (name, source_link, file_path),
+    )
+    row = cursor.fetchone()
+    if row:
+        # Scenario #3: Exact match found
+        existing_id = row[0]
+        print(f"Source already exists with ID={existing_id}. Returning existing ID.")
+        return existing_id
+
+    # STEP 2: Attempt insert for a brand-new source
+    try:
+        cursor.execute(
+            """
+            INSERT INTO sources (name, source, file)
+            VALUES (?, ?, ?)
+            """,
+            (name, source_link, file_path),
+        )
+        new_id = cursor.lastrowid
+        conn.commit()
+        # Scenario #1: Insert succeeded, so return the new source ID
+        return new_id
+
+    except sqlite3.IntegrityError as e:
+        # STEP 3: We know the row doesn't exactly match, because we checked above.
+        # So this must be a partial conflict -> Raise an error
+        raise ValueError(
+            "Uniqueness conflict: a row with one of these fields already exists, but does not match all fields."
+        ) from e
+
+
+def create_source_word(
+    conn: sqlite3.Connection, source_id: int, word_id: str, score: int = None
+):
+    """
+    Inserts or updates a row in 'source_word' that links a source to a word.
+
+    Table schema (recap):
+        CREATE TABLE IF NOT EXISTS source_word (
+            source_id INTEGER NOT NULL,
+            word_id   TEXT NOT NULL,
+            score     INTEGER,
+            FOREIGN KEY(source_id) REFERENCES sources(id)
+                ON UPDATE CASCADE ON DELETE CASCADE,
+            FOREIGN KEY(word_id) REFERENCES wordlist(answers)
+                ON UPDATE CASCADE ON DELETE CASCADE,
+            PRIMARY KEY (source_id, word_id)
+        );
+
+    Behavior:
+      1. If (source_id, word_id, score) already exists exactly, prints a message and does nothing more.
+      2. If (source_id, word_id) exists but has a different score, updates the row's score.
+      3. If no row with (source_id, word_id) exists, inserts a new row.
+
+    :param conn:      An active sqlite3.Connection object
+    :param source_id: The 'id' from the 'sources' table
+    :param word_id:   The 'answers' text PK from the 'wordlist' table
+    :param score:     An optional score for this specific source/word relationship
+    :return: None
+    """
+    cursor = conn.cursor()
+
+    # 1) Check if there's already a row with the same (source_id, word_id)
+    cursor.execute(
+        """
+        SELECT score
+          FROM source_word
+         WHERE source_id = ?
+           AND word_id = ?
+    """,
+        (source_id, word_id),
+    )
+    row = cursor.fetchone()
+
+    if row is not None:
+        existing_score = row[0]
+        # If the row already has the exact same score, do nothing
+        if existing_score == score:
+            print(
+                f"[INFO] source_word entry (source_id={source_id}, word_id='{word_id}') "
+                "already exists with the same score. Nothing to do."
+            )
+        else:
+            # 2) (source_id, word_id) exists but different score -> update
+            cursor.execute(
+                """
+                UPDATE source_word
+                   SET score = ?
+                 WHERE source_id = ?
+                   AND word_id = ?
+            """,
+                (score, source_id, word_id),
+            )
+            print(
+                f"[INFO] Updated source_word (source_id={source_id}, word_id='{word_id}') "
+                f"from score={existing_score} to score={score}."
+            )
+        conn.commit()
+        return
+    else:
+        # 3) No row exists for (source_id, word_id) -> insert a new record
+        try:
+            cursor.execute(
+                """
+                INSERT INTO source_word (source_id, word_id, score)
+                VALUES (?, ?, ?)
+            """,
+                (source_id, word_id, score),
+            )
+            conn.commit()
+            print(
+                f"[INFO] Created new source_word (source_id={source_id}, word_id='{word_id}', score={score})."
+            )
+        except sqlite3.IntegrityError as e:
+            # Raise a more descriptive error if something unexpected happens (e.g., invalid FK reference).
+            raise ValueError(
+                f"Failed to insert into source_word: source_id={source_id}, word_id='{word_id}', score={score}. "
+                "Likely a foreign key or uniqueness constraint issue."
+            ) from e
+
+
+import sqlite3
+
+
+def is_word_in_db(conn: sqlite3.Connection, word: str) -> bool:
+    """
+    Returns True if `word` (converted to uppercase) is present in
+    the `wordlist` table's 'answers' column, otherwise False.
+
+    :param conn: An active sqlite3 connection
+    :param word: A string to check (e.g., "banana")
+    :return: Boolean indicating whether the word is in the DB
+    """
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM wordlist WHERE answers = ?", (word,))
+    row = cursor.fetchone()
+    return row is not None
+
+
+def add_word(conn: sqlite3.Connection, word: str):
+    """
+    Adds a word if not present, then returns the SQLite internal rowid.
+    """
+    word_upper = word.upper()
+    cursor = conn.cursor()
+
+    # Check if the word already exists
+    cursor.execute("SELECT rowid FROM wordlist WHERE answers = ?", (word_upper,))
+    row = cursor.fetchone()
+    if row is not None:
+        tqdm.write(
+            f"{c_yellow}Warning:{c_end} Word {word_upper}already exists in the database. Skipping"
+        )
+        return
+
+    # Insert
+    cursor.execute(
+        """
+        INSERT INTO wordlist (answers, clues, scores, status)
+        VALUES (?, ?, ?, ?)
+    """,
+        (word_upper, fetch_clues(word=word_upper), None, "unchecked"),
+    )
+    conn.commit()
