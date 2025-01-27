@@ -1,5 +1,7 @@
 """score the words in the wordlist using a pretrained SVM model"""
 
+"""runtime = 31 minutes"""
+
 import json
 import sqlite3
 import tqdm
