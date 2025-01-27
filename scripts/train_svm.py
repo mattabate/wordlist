@@ -6,7 +6,7 @@ import yaml
 
 from utils.printing import c_red, c_end
 from models.svm import train_svm
-from models.database import get_words
+from models.database import get_words_and_clues
 
 
 def load_config(config_file):
@@ -25,8 +25,8 @@ DATABASE_FILE = config["create_db"].get("DATABASE_FILE", "wordlist.db")
 if __name__ == "__main__":
     conn = sqlite3.connect(DATABASE_FILE)
     try:
-        approved = get_words(conn=conn, status="approved")
-        rejected = get_words(conn=conn, status="rejected")
+        approved = get_words_and_clues(conn=conn, status="approved")
+        rejected = get_words_and_clues(conn=conn, status="rejected")
 
     except Exception as e:
         print(f"{c_red}Error:{c_end} {e}")
