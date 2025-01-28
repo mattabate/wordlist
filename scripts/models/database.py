@@ -191,6 +191,41 @@ def update_score(conn, word: str, score: int) -> int:
     return cursor.rowcount
 
 
+def update_clues_for_word(conn: sqlite3.Connection, word: str) -> None:
+    """
+    Given a word, fetch its clues from an external API (fetch_clues)
+    and, if successful, update both the 'clues' and 'clues_last_updated'
+    fields in the 'wordlist' table.
+    """
+    c = fetch_clues(word)
+    if c is not None and c.strip():  # only update if clues is not empty
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE wordlist
+            SET clues = ?,
+                clues_last_updated = datetime('now')
+            WHERE answers = ?
+            """,
+            (c, word.upper()),
+        )
+        conn.commit()
+        return True
+    else:
+        # update date anyway
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE wordlist
+            SET clues_last_updated = datetime('now')
+            WHERE answers = ?
+            """,
+            (word.upper(),),
+        )
+        conn.commit()
+        return False
+
+
 def add_source(
     conn: sqlite3.Connection, name: str, source_link: str, file_path: str
 ) -> int:
