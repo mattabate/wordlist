@@ -1,12 +1,14 @@
 """score the words in the wordlist using a pretrained SVM model"""
 
+import datetime
 import os
+import pickle
 import sqlite3
 import yaml
 
 from utils.printing import c_red, c_end
 from models.svm import train_svm
-from models.database import get_words_and_clues
+from models.database import get_words_and_clues, add_model
 
 
 def load_config(config_file):
@@ -21,6 +23,7 @@ CONFIG_FILE = "scripts/config.yml"
 config = load_config(CONFIG_FILE)
 
 DATABASE_FILE = config["create_db"].get("DATABASE_FILE", "wordlist.db")
+TRAIN_PKL_MODL = config["train_svm"]["MODEL_FILE"]
 
 if __name__ == "__main__":
     conn = sqlite3.connect(DATABASE_FILE)
@@ -34,4 +37,22 @@ if __name__ == "__main__":
     finally:
         conn.close()
 
-    train_svm(approved, rejected)
+    best_clf, score = train_svm(approved, rejected)
+
+    # current daretime string format 2025-01-28 05:29:09
+    date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = sqlite3.connect(DATABASE_FILE)
+    try:
+        model_id = add_model(conn, score, date)
+    except Exception as e:
+        print(f"{c_red}Error:{c_end} {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+    # if training concludes and we get here
+    # get index of next model
+    # save file
+    with open(f"scripts/models/models/{model_id}.pkl", "wb") as f:
+        pickle.dump(best_clf, f)
+
+    print(f"SVM model saved as: {TRAIN_PKL_MODL}")

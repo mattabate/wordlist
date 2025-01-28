@@ -398,3 +398,42 @@ def add_word(conn: sqlite3.Connection, word: str):
         (word_upper, fetch_clues(word=word_upper), None, "unchecked"),
     )
     conn.commit()
+
+
+def add_model(conn, time_trained: str, training_score: float) -> int:
+    """
+    Inserts a new model row into the 'model' table, then updates its pkl_file_name
+    to match the newly assigned model ID.
+
+    :param conn: An active sqlite3.Connection object.
+    :param time_trained: A string representing the training time (ISO 8601 recommended).
+    :param training_score: The model's training performance score as a float.
+
+    :return: The newly assigned 'id' from the 'model' table.
+    """
+    cur = conn.cursor()
+
+    # 1. Insert a placeholder row (autoincrement assigns an ID)
+    cur.execute(
+        """
+        INSERT INTO model (pkl_file_name, time_trained, training_score)
+        VALUES ('placeholder', ?, ?)
+        """,
+        (time_trained, training_score),
+    )
+    new_id = cur.lastrowid  # the newly assigned primary key
+
+    # 2. Update the just-inserted row so pkl_file_name matches new_id
+    #    For example, you can store it as "123.pkl" or just "123"
+    pkl_file_name = f"scripts/models/models/{new_id}.pkl"
+    cur.execute(
+        """
+        UPDATE model
+        SET pkl_file_name = ?
+        WHERE id = ?
+        """,
+        (pkl_file_name, new_id),
+    )
+
+    conn.commit()
+    return new_id
