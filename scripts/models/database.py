@@ -437,3 +437,32 @@ def add_model(conn, time_trained: str, training_score: float) -> int:
 
     conn.commit()
     return new_id
+
+
+def add_word_model_score(
+    conn: sqlite3.Connection, word: str, model_id: int, score: float
+) -> None:
+    """
+    Inserts a new (word, model, score) row into the word_model_score table.
+
+    :param conn: A live sqlite3.Connection object.
+    :param model_id: The integer ID of the model (foreign key to model.id).
+    :param word: The word to be scored (foreign key to wordlist.answers).
+    :param score: The floating-point score for this (word, model) pair.
+
+    Note: Raises sqlite3.IntegrityError if (word, model) already exists,
+    or if 'word'/'model' does not exist in their respective tables (if FK constraints are on).
+    """
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            INSERT INTO word_model_score (word, model, score)
+            VALUES (?, ?, ?)
+            """,
+            (word.upper(), model_id, score),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError as e:
+        # Handle or re-raise integrity errors (duplicate primary key, foreign key missing, etc.)
+        raise e
