@@ -1,44 +1,21 @@
 #!/usr/bin/env python3
 """
-This script updates an SQLite database for the crossword wordlist using file paths 
-loaded from config.yml.
-
-It performs the updates in four phases when you use the `--create_db` flag:
-    1. Initialize entries: Insert missing words (with all fields NULL except answers and a default status).
-    2. Update scores: Update words that lack a score if they appear in the scored JSON.
-    3. Update statuses: For words with status 'unchecked', update status from the approved/rejected JSONs.
-    4. Update clues: For words without clues, call the API to fetch and update clues.
-
-It also supports a special mode with the `--update_rankings` flag, which:
-    * Only updates statuses in the DB for words that appear in the approved/rejected JSON files,
-      ignoring any existing status. This is intended to quickly re-rank words after manual approval/rejection.
+Create or update the crossword wordlist database.
 
 Usage:
-  python scripts/create_db.py --help
-  python scripts/create_db.py --create_db [--force]
-  python scripts/create_db.py --update_rankings
-
-Flags:
-  --create_db        Create or update the database (runs phases 1–4).
-  --force            If used with --create_db, deletes any existing DB file first.
-  --update_rankings  Only update statuses for words in approved.json or rejected.json.
-  --help             Show this help message and exit.
+    python create_db.py --create_db [--force]
 """
 
 import argparse
-import sqlite3
 import os
+import sqlite3
+import yaml
 from tqdm import tqdm
-import yaml  # Make sure to install PyYAML: pip install pyyaml
 
-# Color-coded printing utilities
 import models.database
 import utils.json
-from utils.printing import c_red, c_green, c_yellow, c_blue, c_pink, c_end
+from utils.printing import c_red, c_green, c_yellow, c_blue, c_end
 
-# -----------------------------
-# Load configuration from config.yml
-# -----------------------------
 CONFIG_FILE = "scripts/config.yml"
 
 
@@ -49,9 +26,10 @@ def load_config(config_file):
         return yaml.safe_load(f)
 
 
+# -----------------------------
+# Load configuration from config.yml
+# -----------------------------
 config = load_config(CONFIG_FILE)
-
-# File paths loaded from the "create_db" section.
 RAW_WORDLIST_FILE = config["create_db"]["RAW_WORDLIST"]
 SCORED_WORDLIST_FILE = config["create_db"]["SCORED_WORDLIST"]
 WORDS_APPROVED = config["create_db"]["WORDS_APPROVED"]
@@ -199,56 +177,9 @@ def update_clues(conn):
     tqdm.write(f"{c_green}Updated clues for {updated} words.{c_end}")
 
 
-def update_rankings(conn):
-    """
-    Only update the status for words in approved.json or rejected.json, and
-    count how many actually changed.
-
-    This forces the status to 'approved' or 'rejected' only if
-    the current status is different from the target status.
-    """
-    approved_set = set(utils.json.load_json(WORDS_APPROVED))
-    rejected_set = set(utils.json.load_json(WORDS_REJECTED))
-
-    cur = conn.cursor()
-    changed_count = 0
-
-    # Update all approved words (only if status != 'approved')
-    for word in approved_set:
-        cur.execute(
-            """
-            UPDATE wordlist
-            SET status = 'approved'
-            WHERE answers = UPPER(?) AND status != 'approved'
-            """,
-            (word,),
-        )
-        changed_count += cur.rowcount
-
-    # Update all rejected words (only if status != 'rejected')
-    for word in rejected_set:
-        cur.execute(
-            """
-            UPDATE wordlist
-            SET status = 'rejected'
-            WHERE answers = UPPER(?) AND status != 'rejected'
-            """,
-            (word,),
-        )
-        changed_count += cur.rowcount
-
-    conn.commit()
-    print(
-        f"{c_green}Actually updated status for {changed_count} entries (rankings).{c_end}"
-    )
-
-
-# -----------------------------
-# Main
-# -----------------------------
 def main():
     parser = argparse.ArgumentParser(
-        description="Update or create the crossword wordlist database.",
+        description="Create or update the crossword wordlist database.",
         epilog="Run with --help to see available options.",
     )
     parser.add_argument(
@@ -261,26 +192,7 @@ def main():
         action="store_true",
         help="If used with --create_db, deletes the existing database first.",
     )
-    parser.add_argument(
-        "--update_rankings",
-        action="store_true",
-        help="Only update DB status for words in approved.json or rejected.json.",
-    )
-    # Note: argparse automatically adds a --help flag
-
     args = parser.parse_args()
-
-    # If user wants to only update rankings, do that and exit.
-    if args.update_rankings:
-        conn = sqlite3.connect(DATABASE_FILE)
-        try:
-            update_rankings(conn)
-        except Exception as e:
-            print(f"{c_red}Error while updating rankings:{c_end} {e}")
-            conn.rollback()
-        finally:
-            conn.close()
-        return
 
     # If user wants to create or update the DB (main pipeline):
     if args.create_db:
@@ -317,7 +229,7 @@ def main():
         finally:
             conn.close()
     else:
-        # If neither --create_db nor --update_rankings was provided, just show help.
+        # If neither --create_db nor --force was provided, just show help.
         parser.print_help()
 
 
