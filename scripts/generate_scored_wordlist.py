@@ -1,74 +1,107 @@
-"""score the words in the wordlist using a pretrained SVM model"""
+#!/usr/bin/env python3
+"""
+Generate a scored wordlist for a given model, normalized to [0..50],
+and sorted by descending score, then alphabetically.
 
-"""runtime = 31 minutes"""
+Usage:
+    python3 generate_scored_wordlist.py --model 1
+"""
 
+import argparse
 import json
 import sqlite3
-import tqdm
 import yaml
+from tqdm import tqdm
 
-import models.database
-import utils.printing
+from utils.printing import c_red, c_green, c_yellow, c_end
 
-from models.svm import infer
 
-with open("scripts/config.yml") as file:
-    config = yaml.safe_load(file)
-    DATABASE_FILE = "wordlist.db"
-    RAW_WORDLIST = config["generate_scored_wordlist"]["RAW_WORDLIST"]
-    SCORED_WORDLIST = config["generate_scored_wordlist"]["SCORED_WORDLIST"]
-    SORTED_WORDLIST = config["generate_scored_wordlist"]["SORTED_WORDLIST"]
+def main():
+    # 1. Parse arguments
+    parser = argparse.ArgumentParser(
+        description="Generate a normalized scored wordlist for a given model."
+    )
+    parser.add_argument("--model", type=int, required=True, help="Model ID to process.")
+    args = parser.parse_args()
+    model_id = args.model
+
+    # 2. Load config
+    with open("scripts/config.yml", "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+
+    # Filenames from config
+    DATABASE_FILE = config["generate_scored_wordlist"].get(
+        "DATABASE_FILE", "wordlist.db"
+    )
+    SCORED_WORDLIST_JSON = config["generate_scored_wordlist"]["SCORED_WORDLIST"]
+    SORTED_WORDLIST_JSON = config["generate_scored_wordlist"]["SORTED_WORDLIST"]
     SCORED_WORDLIST_TXT = config["generate_scored_wordlist"]["SCORED_WORDLIST_TXT"]
 
-if __name__ == "__main__":
-    with open(RAW_WORDLIST) as file:
-        data = json.load(file)
-
-    print(
-        f"{utils.printing.c_yellow}Number of words:{utils.printing.c_end} {len(data)}"
-    )
-
-    model_output = infer(data)
-
-    # get max and min scores
-    max_score = max(model_output, key=lambda x: x[1])
-    min_score = min(model_output, key=lambda x: x[1])
-
-    # normalize so they are 0 - 50
-    matt_scores = {
-        w: int((s - min_score[1]) / (max_score[1] - min_score[1]) * 50)
-        for w, s in model_output
-    }
-
-    with open(SCORED_WORDLIST, "w") as file:
-        json.dump(matt_scores, file, indent=4)
-
-    with open(SORTED_WORDLIST, "w") as file:
-        json.dump([w for w, _ in model_output], file, indent=4)
-
-    with open(SCORED_WORDLIST_TXT, "w") as file:
-        for word, score in matt_scores.items():
-            file.write(f"{word};{score}\n")
-
-    # update scores in db
-
+    # 3. Connect to DB & fetch scores for this model
     conn = sqlite3.connect(DATABASE_FILE)
-    try:
-        words = models.database.get_words_and_clues(conn, status="")
-        for word in tqdm.tqdm(words):
-            if word not in matt_scores:
-                tqdm.tqdm.write(
-                    f"Word {utils.printing.c_pink}{word}{utils.printing.c_end} not in wordlist. Setting score to 0."
-                )
-                models.database.update_score(conn, word, 0)
-            else:
-                tqdm.tqdm.write(
-                    f"Updating score for {utils.printing.c_green}{word}{utils.printing.c_end} to {utils.printing.c_green}{matt_scores[word]}{utils.printing.c_end}"
-                )
-                models.database.update_score(conn, word, matt_scores[word])
+    cur = conn.cursor()
 
-    except Exception as e:
-        print(f"{utils.printing.c_red}Error:{utils.printing.c_end} {e}")
-        conn.rollback()
-    finally:
-        conn.close()
+    cur.execute(
+        """
+        SELECT wms.word, wms.score
+        FROM word_model_score wms
+        JOIN wordlist w
+            ON wms.word = w.answers
+        WHERE wms.model = ?
+        AND w.status != 'rejected'
+        """,
+        (model_id,),
+    )
+    results = cur.fetchall()
+    conn.close()
+
+    if not results:
+        print(f"{c_yellow}No scores found for model {model_id}.{c_end}")
+        return
+
+    # 4. Separate into (word, raw_score)
+    #    Sort primarily by score descending, secondarily by word ascending
+    words_and_scores = [(row[0], float(row[1])) for row in results]
+    words_and_scores.sort(key=lambda x: (-x[1], x[0]))
+
+    # 5. Determine min & max raw scores
+    min_score = min(words_and_scores, key=lambda x: x[1])[1]
+    max_score = max(words_and_scores, key=lambda x: x[1])[1]
+    score_range = max_score - min_score
+
+    # 6. Normalize to [0..50]
+    normalized_dict = {}
+    if score_range == 0:
+        # If all scores are identical
+        print(f"{c_red}All scores are identical. Normalizing to 25 by default.{c_end}")
+        for w, s in words_and_scores:
+            normalized_dict[w] = 25
+    else:
+        for w, s in words_and_scores:
+            normalized_value = (s - min_score) / score_range * 50
+            normalized_dict[w] = int(normalized_value)
+
+    # 7. Write out the JSON dict of {word: normalized_score}
+    #    in the sorted order (in Python >=3.7, dicts preserve insertion order)
+    ordered_dict_for_json = {}
+    for w, _ in words_and_scores:
+        ordered_dict_for_json[w] = normalized_dict[w]
+
+    with open(SCORED_WORDLIST_JSON, "w", encoding="utf-8") as f:
+        json.dump(ordered_dict_for_json, f, indent=4)
+
+    # 8. Write out the sorted list of words (descending by raw score, then alpha)
+    sorted_word_list = [w for (w, _) in words_and_scores]
+    with open(SORTED_WORDLIST_JSON, "w", encoding="utf-8") as f:
+        json.dump(sorted_word_list, f, indent=4)
+
+    # 9. Write out a TXT file: "word;score" using the normalized score in the same order
+    with open(SCORED_WORDLIST_TXT, "w", encoding="utf-8") as f:
+        for w in sorted_word_list:
+            f.write(f"{w};{normalized_dict[w]}\n")
+
+    print(f"{c_green}Done!{c_end} Generated scored wordlist for model {model_id}.")
+
+
+if __name__ == "__main__":
+    main()
