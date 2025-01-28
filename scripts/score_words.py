@@ -12,8 +12,6 @@ import tqdm
 import argparse
 import sqlite3
 import time
-import os
-from dotenv import load_dotenv
 from models.database import get_clues_for_word, add_word_model_score
 from models.svm import client, clf, add_prefix, EMB_MODL
 import utils.printing
