@@ -63,7 +63,7 @@ def infer(words: List[str]) -> List[Tuple[str, float]]:
             for j in range(i, min(i + chunk_size, len(words)))
         ]
 
-        time.sleep(0.5)  # Pause to avoid overloading
+        time.sleep(0.1)  # Pause to avoid overloading
 
     # Sort high-to-low by decision_function score
     word_scores_sorted = sorted(word_scores, key=lambda x: x[1], reverse=True)
