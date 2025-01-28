@@ -15,9 +15,9 @@ from utils.wordlist import parse_file_to_dict
 
 
 DATABASE_FILE = "wordlist.db"
-name = "chrisjones"
-url = "https://github.com/christophsjones/crossword-wordlist"
-file_path = "data/sources/chrisjones/crossword_wordlist.txt"
+name = "spreadthewordlist"
+url = "https://www.spreadthewordlist.com/wordlist"
+file_path = "data/sources/spreadthewordlist/spreadthewordlist.txt"
 
 if __name__ == "__main__":
     my_dict = parse_file_to_dict(file_path)
@@ -45,7 +45,13 @@ if __name__ == "__main__":
     tqdm.tqdm.write(
         f"Adding {utils.printing.c_yellow}{len(words_to_add)}{utils.printing.c_end} words to the database"
     )
+    words_to_add = list(words_to_add)
+    # sort by score in wordlist
+    words_to_add.sort(key=lambda x: my_dict[x], reverse=True)
     for word in tqdm.tqdm(words_to_add):
+        tqdm.tqdm.write(
+            f"Adding {utils.printing.c_yellow}{word}{utils.printing.c_end} to the database. List score: {my_dict[word]}"
+        )
         add_word(conn, word)
 
     # add words to the source
