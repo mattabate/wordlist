@@ -40,19 +40,20 @@ if __name__ == "__main__":
     best_clf, score = train_svm(approved, rejected)
 
     # current daretime string format 2025-01-28 05:29:09
-    date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = sqlite3.connect(DATABASE_FILE)
+    success = True
     try:
         model_id = add_model(conn, score, date)
     except Exception as e:
         print(f"{c_red}Error:{c_end} {e}")
         conn.rollback()
+        success = False
     finally:
         conn.close()
-    # if training concludes and we get here
-    # get index of next model
-    # save file
-    with open(f"scripts/models/models/{model_id}.pkl", "wb") as f:
-        pickle.dump(best_clf, f)
 
-    print(f"SVM model saved as: {TRAIN_PKL_MODL}")
+    if success:
+        with open(f"scripts/models/models/{model_id}.pkl", "wb") as f:
+            pickle.dump(best_clf, f)
+
+        print(f"SVM model saved as: {model_id}.pkl")

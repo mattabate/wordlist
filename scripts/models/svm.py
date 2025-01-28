@@ -158,7 +158,7 @@ def train_model(X_train_vectors: List[List[float]], y_train: List[int]) -> SVC:
     param_grid = {
         "kernel": ["linear", "rbf"],
         "C": [1, 10],
-        "gamma": [0.1, 1],  # only used for 'rbf' kernel
+        "gamma": [0.1, 1, 5, 10],  # only used for 'rbf' kernel
     }
 
     grid_search = GridSearchCV(
