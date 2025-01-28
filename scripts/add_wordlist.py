@@ -1,64 +1,120 @@
-"""this script adds a wordlist to the database"""
-
+import argparse
+import os
+import sys
+import yaml
 import sqlite3
 import tqdm
+
 import utils.printing
 from models.database import (
     add_source,
     create_source_word,
-    is_word_in_db,
     add_word,
     get_words,
 )
-
 from utils.wordlist import parse_file_to_dict
 
 
 DATABASE_FILE = "wordlist.db"
-name = "spreadthewordlist"
-url = "https://www.spreadthewordlist.com/wordlist"
-file_path = "data/sources/spreadthewordlist/spreadthewordlist.txt"
+
 
 if __name__ == "__main__":
-    my_dict = parse_file_to_dict(file_path)
 
-    # add source:
+    # 1. Parse command-line arguments
+    parser = argparse.ArgumentParser(description="Add a wordlist to the database.")
+    parser.add_argument(
+        "--input",
+        "-i",
+        help="Name of the wordlist folder to load config from (e.g., 'spreadthewordlist').",
+    )
+    args = parser.parse_args()
+
+    # 2. If no input provided, print help and exit
+    if not args.input:
+        print(
+            f"{utils.printing.c_red}Error: No input wordlist specified.{utils.printing.c_end}"
+        )
+        parser.print_help()
+        sys.exit(1)
+
+    # 3. Build the path to the config.yml based on the --input argument
+    config_path = os.path.join("data", "sources", args.input, "config.yml")
+
+    # Check if config file exists
+    if not os.path.exists(config_path):
+        print(
+            f"{utils.printing.c_red}Error: Could not find config file at {config_path}{utils.printing.c_end}"
+        )
+        sys.exit(1)
+
+    # 4. Load parameters from config.yml
+    try:
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+
+        # Extract parameters from YAML
+        name = config["name"]
+        url = config["url"]
+        file_path = config["file_path"]
+
+    except Exception as e:
+        print(
+            f"{utils.printing.c_red}Error reading config file: {e}{utils.printing.c_end}"
+        )
+        sys.exit(1)
+
+    # 5. Main logic for adding the wordlist
+    try:
+        my_dict = parse_file_to_dict(file_path)
+    except Exception as e:
+        print(
+            f"{utils.printing.c_red}Error parsing wordlist: {e}{utils.printing.c_end}"
+        )
+        sys.exit(1)
+
+    # Connect to the DB
     conn = sqlite3.connect(DATABASE_FILE)
+
+    # Add source
     source_id = add_source(
         conn,
         name=name,
         source_link=url,
         file_path=file_path,
     )
-
     if not source_id:
         print(
-            f"{utils.printing.c_red}Error{utils.printing.c_red}:find this{utils.printing.c_end}"
+            f"{utils.printing.c_red}Error: Could not add source to database.{utils.printing.c_end}"
         )
-        exit()
+        conn.close()
+        sys.exit(1)
 
-    words_in_wordslist = [s for s in my_dict.keys()]
+    # Get existing words from DB
     words_in_db = get_words(conn)
+    # Determine which words need to be added
+    words_in_db_set = set(words_in_db)
+    words_to_add = [w for w in my_dict if w not in words_in_db_set]
 
-    # get all words in the wordlist that are not in the database
-    words_to_add = set(words_in_wordslist) - set(words_in_db)
     tqdm.tqdm.write(
         f"Adding {utils.printing.c_yellow}{len(words_to_add)}{utils.printing.c_end} words to the database"
     )
-    words_to_add = list(words_to_add)
-    # sort by score in wordlist
+
+    # Sort by score (descending) in the parsed dict
     words_to_add.sort(key=lambda x: my_dict[x], reverse=True)
+
+    # Add missing words
     for word in tqdm.tqdm(words_to_add):
         tqdm.tqdm.write(
             f"Adding {utils.printing.c_yellow}{word}{utils.printing.c_end} to the database. List score: {my_dict[word]}"
         )
         add_word(conn, word)
 
-    # add words to the source
+    # Add all words to this source in DB
     tqdm.tqdm.write(
-        f"Adding {utils.printing.c_yellow}{len(my_dict)}{utils.printing.c_end} words to the source"
+        f"Associating {utils.printing.c_yellow}{len(my_dict)}{utils.printing.c_end} words with source '{name}'."
     )
-    for k, v in tqdm.tqdm(my_dict.items()):
-        create_source_word(conn, source_id, k, v)
+    for w, score in tqdm.tqdm(my_dict.items()):
+        create_source_word(conn, source_id, w, score)
 
     conn.close()
+    print(f"{utils.printing.c_green}Done!{utils.printing.c_end}")
