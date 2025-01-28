@@ -338,24 +338,6 @@ def create_source_word(
             ) from e
 
 
-import sqlite3
-
-
-def is_word_in_db(conn: sqlite3.Connection, word: str) -> bool:
-    """
-    Returns True if `word` (converted to uppercase) is present in
-    the `wordlist` table's 'answers' column, otherwise False.
-
-    :param conn: An active sqlite3 connection
-    :param word: A string to check (e.g., "banana")
-    :return: Boolean indicating whether the word is in the DB
-    """
-    cursor = conn.cursor()
-    cursor.execute("SELECT 1 FROM wordlist WHERE answers = ?", (word,))
-    row = cursor.fetchone()
-    return row is not None
-
-
 def add_word(conn: sqlite3.Connection, word: str):
     """
     Adds a word if not present, then returns the SQLite internal rowid.
