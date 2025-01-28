@@ -466,3 +466,51 @@ def add_word_model_score(
     except sqlite3.IntegrityError as e:
         # Handle or re-raise integrity errors (duplicate primary key, foreign key missing, etc.)
         raise e
+
+
+def update_word_status(conn: sqlite3.Connection, word: str, new_status: str) -> None:
+    """
+    Updates the status of a given word in the 'wordlist' table.
+
+    :param conn: An active sqlite3.Connection object.
+    :param word: The word whose status needs to be updated.
+    :param new_status: The new status to set for the word (e.g., 'approved', 'rejected', 'unchecked').
+
+    :raises ValueError: If the word does not exist in the database.
+    :raises sqlite3.Error: If a database error occurs during the operation.
+    """
+    word_upper = word.upper()
+    cur = conn.cursor()
+
+    try:
+        # Check if the word exists
+        cur.execute("SELECT status FROM wordlist WHERE answers = ?", (word_upper,))
+        row = cur.fetchone()
+
+        if row is None:
+            tqdm.write(
+                f"{c_red}Error:{c_end} Word '{word_upper}' does not exist in the database."
+            )
+            raise ValueError(f"Word '{word_upper}' not found in the database.")
+
+        current_status = row[0]
+
+        # Update the status only if it's different
+        if current_status != new_status:
+            cur.execute(
+                "UPDATE wordlist SET status = ? WHERE answers = ?",
+                (new_status, word_upper),
+            )
+            conn.commit()
+            tqdm.write(
+                f"{c_green}Success:{c_end} Updated status of '{word_upper}' from '{current_status}' to '{new_status}'."
+            )
+        else:
+            tqdm.write(
+                f"{c_yellow}Notice:{c_end} The word '{word_upper}' already has status '{new_status}'. No update needed."
+            )
+
+    except sqlite3.Error as e:
+        tqdm.write(f"{c_red}SQLite Error:{c_end} {e}")
+        conn.rollback()
+        raise

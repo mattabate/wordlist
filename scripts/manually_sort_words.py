@@ -1,6 +1,15 @@
+#!/usr/bin/env python3
+"""
+Word Sorting Application using PyQt5 and SQLite.
+
+This application allows users to sort words by approving or rejecting them.
+It updates the word statuses directly in the SQLite database.
+"""
+
 import sys
 import webbrowser  # Added import for webbrowser
 import yaml
+import sqlite3
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
@@ -16,43 +25,42 @@ from PyQt5.QtWidgets import (
     QMessageBox,
 )
 
-from models.database import get_clues_for_word
+from models.database import get_clues_for_word, update_word_status, get_words
 from models.svm import infer
 from utils.json import append_json, remove_from_json, load_json
+from utils.printing import c_red, c_green, c_yellow, c_end
 
-# manually_sort_words:
-# - WORDS_APPROVED: "data/raw/approved.json"
-# - WORDS_OMITTED: "data/raw/rejected.json"
-
+# Configuration loading
 with open("scripts/config.yml") as file:
     config = yaml.safe_load(file)
     RAW_WORDLIST = config["manually_sort_words"]["RAW_WORDLIST"]
     WORDS_APPROVED_JSON = config["manually_sort_words"]["WORDS_APPROVED"]
     WORDS_REJECTED = config["manually_sort_words"]["WORDS_REJECTED"]
     WORDLIST_SOURCE = config["manually_sort_words"]["WORDLIST_SOURCE"]
-    # RAW_WORDLIST = config["generate_scored_wordlist"]["RAW_WORDLIST"]
-    # SCORED_WORDLIST = config["generate_scored_wordlist"]["SCORED_WORDLIST"]
-    # SORTED_WORDLIST = config["generate_scored_wordlist"]["SORTED_WORDLIST"]
-
 
 _max_words_considered = 2000
+
+DB_PATH = "wordlist.db"
 
 
 class WordSortingApp(QWidget):
     def __init__(self):
         super().__init__()
 
+        # Initialize database connection
+        self.conn = sqlite3.connect(DB_PATH)
+
         self.source = WORDLIST_SOURCE
 
-        words_condiered = load_json(WORDLIST_SOURCE)
-        if len(words_condiered) > _max_words_considered:
-            words_condiered = words_condiered[:_max_words_considered]
-        scored_words = infer(words_condiered)
+        words_considered = load_json(WORDLIST_SOURCE)
+        if len(words_considered) > _max_words_considered:
+            words_considered = words_considered[:_max_words_considered]
+        scored_words = infer(words_considered)
 
         self.words_considered = [word for word, _ in scored_words[::-1]]
 
-        self.words_omitted = load_json(WORDS_REJECTED)
-        self.words_approved = load_json(WORDS_APPROVED_JSON)
+        self.words_omitted = get_words(conn=self.conn, status="rejected")
+        self.words_approved = get_words(conn=self.conn, status="approved")
         self.words_seen = set(self.words_omitted + self.words_approved)
 
         self.total_words = len(self.words_considered)  # Total number of words
@@ -187,7 +195,7 @@ class WordSortingApp(QWidget):
 
         self.word_label.setText(f"{word.upper()}")
 
-        clues = get_clues_for_word(word, "wordlist.db")
+        clues = get_clues_for_word(word, DB_PATH)  # Updated to pass the connection
         if not clues:
             # No clues found, make the clues text box pink
             self.clues_text.setStyleSheet(
@@ -204,18 +212,28 @@ class WordSortingApp(QWidget):
 
     def accept_word(self):
         word = self.current_word
-        append_json(WORDS_APPROVED_JSON, word)
-        remove_from_json(WORDLIST_SOURCE, word)
-        self.word_index += 1
-        self.process_next_word()
+        try:
+            # Update the status in the database to 'approved'
+            update_word_status(self.conn, word, "approved")
+            # Remove the word from WORDLIST_SOURCE
+            remove_from_json(WORDLIST_SOURCE, word)
+            self.word_index += 1
+            self.process_next_word()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to accept word '{word}': {e}")
 
     def reject_word(self):
         word = self.current_word
-        append_json(WORDS_REJECTED, word)
-        remove_from_json(RAW_WORDLIST, word)
-        remove_from_json(WORDLIST_SOURCE, word)
-        self.word_index += 1
-        self.process_next_word()
+        try:
+            # Update the status in the database to 'rejected'
+            update_word_status(self.conn, word, "rejected")
+            # Remove the word from RAW_WORDLIST and WORDLIST_SOURCE
+            remove_from_json(RAW_WORDLIST, word)
+            remove_from_json(WORDLIST_SOURCE, word)
+            self.word_index += 1
+            self.process_next_word()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to reject word '{word}': {e}")
 
     def pass_word(self):
         self.word_index += 1
@@ -230,19 +248,33 @@ class WordSortingApp(QWidget):
     def undo_rejection(self):
         entered_word = self.undo_input.toPlainText().strip().upper()
         print("word to undo:", entered_word)
-        if remove_from_json(WORDS_REJECTED, entered_word):
-            append_json(RAW_WORDLIST, entered_word)
-            append_json(WORDS_APPROVED_JSON, entered_word)
-            QMessageBox.information(
-                self, "Undo Successful", f"'{entered_word}' has been restored."
-            )
-        else:
-            QMessageBox.warning(
-                self, "Undo Failed", f"'{entered_word}' was not found in omitted words."
+        try:
+            if remove_from_json(WORDS_REJECTED, entered_word):
+                # Update the status back to 'unchecked' in the database
+                update_word_status(self.conn, entered_word, "approved")
+                append_json(RAW_WORDLIST, entered_word)
+                QMessageBox.information(
+                    self, "Undo Successful", f"'{entered_word}' has been restored."
+                )
+            else:
+                QMessageBox.warning(
+                    self,
+                    "Undo Failed",
+                    f"'{entered_word}' was not found in omitted words.",
+                )
+        except Exception as e:
+            QMessageBox.critical(
+                self, "Error", f"Failed to undo rejection for '{entered_word}': {e}"
             )
 
     def exit_app(self):
         self.close()
+
+    def closeEvent(self, event):
+        # Ensure the database connection is closed when the application exits
+        if self.conn:
+            self.conn.close()
+        event.accept()
 
 
 if __name__ == "__main__":
