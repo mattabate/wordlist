@@ -251,12 +251,6 @@ def train_svm(
 
     # -- 3) Train (grid search)
     best_clf = train_model(X_train_vectors, y_train)
+    score = evaluate_model(best_clf, X_test_vectors, y_test)
 
-    # -- 4) Evaluate
-    evaluate_model(best_clf, X_test_vectors, y_test)
-
-    # -- 5) Save
-    with open(TRAIN_PKL_MODL, "wb") as f:
-        pickle.dump(best_clf, f)
-
-    print(f"SVM model saved as: {TRAIN_PKL_MODL}")
+    return best_clf, score
