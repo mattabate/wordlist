@@ -140,7 +140,7 @@ _NUM_CLUES = 6
 # -----------------------------
 # Functions
 # -----------------------------
-def fetch_clues(word):
+def fetch_clues(word) -> str | None:
     """
     Fetch clues for a word from crosswordtracker.com.
     If no clues are found, returns None.
