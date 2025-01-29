@@ -25,23 +25,14 @@ load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 EMB_MODL = os.getenv("EMB_MODL")
 
-with open("scripts/config.yml") as file:
-    config = yaml.safe_load(file)
-    PKL_MODL = config["model"]["MODEL_FILE"]  # for loading model
-    TRAIN_PKL_MODL = config["train_svm"]["MODEL_FILE"]  # for saving model
-
 # Create OpenAI client (adjust as needed)
 client = OpenAI()
-
-# Load existing model (used for the `infer` function below)
-with open(PKL_MODL, "rb") as file:
-    clf = pickle.load(file)
 
 
 # ------------------------------------------------------------------------------
 #  Inference Function
 # ------------------------------------------------------------------------------
-def infer(words: List[str]) -> List[Tuple[str, float]]:
+def infer(PKL_MODL, words: List[str]) -> List[Tuple[str, float]]:
     """
     Return a sorted list of (word, score) tuples, from most assumed good (score high)
     to most assumed bad (score low).
@@ -49,6 +40,8 @@ def infer(words: List[str]) -> List[Tuple[str, float]]:
     chunk_size = 1500
     words_considered = [add_prefix(w, get_clues_for_word(w)) for w in words]
     word_scores = []
+    with open(PKL_MODL, "rb") as file:
+        clf = pickle.load(file)
 
     for i in tqdm.tqdm(range(0, len(words_considered), chunk_size)):
         batch_words = words_considered[i : i + chunk_size]

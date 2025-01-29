@@ -5,16 +5,28 @@ Script to find words that have no entry in 'word_model_score' for a given model.
 Usage:
     python3 score_words.py --model [MODEL_ID]
 """
-
-
-from typing import List, Tuple
-import tqdm
 import argparse
+import pickle
 import sqlite3
 import time
-from models.database import get_clues_for_word, add_word_model_score
-from models.svm import client, clf, add_prefix, EMB_MODL
+import tqdm
+import yaml
+
+from typing import List, Tuple
+
+from models.svm import client, add_prefix, EMB_MODL
+from models.database import (
+    get_clues_for_word,
+    add_word_model_score,
+    get_model_pkl_file_name,
+)
+
 import utils.printing
+
+
+with open("scripts/config.yml") as file:
+    config = yaml.safe_load(file)
+    DB_PATH = config["db_file"]
 
 
 def get_words_missing_scores(conn, model_id: int) -> list[str]:
@@ -51,7 +63,7 @@ def get_words_missing_scores(conn, model_id: int) -> list[str]:
 # ------------------------------------------------------------------------------
 
 
-def infer(words: List[str]) -> List[Tuple[str, float]]:
+def infer(PKL_FILE: str, words: List[str]) -> List[Tuple[str, float]]:
     """
     Return a sorted list of (word, score) tuples, from most assumed good (score high)
     to most assumed bad (score low).
@@ -59,6 +71,8 @@ def infer(words: List[str]) -> List[Tuple[str, float]]:
     chunk_size = 1500
     words_considered = [add_prefix(w, get_clues_for_word(w)) for w in words]
     word_scores = []
+    with open(PKL_FILE, "rb") as file:
+        clf = pickle.load(file)
 
     for i in tqdm.tqdm(range(0, len(words_considered), chunk_size)):
         batch_words = words_considered[i : i + chunk_size]
@@ -89,10 +103,11 @@ def main():
 
     model_id = args.model
 
-    conn = sqlite3.connect("wordlist.db")
+    conn = sqlite3.connect(DB_PATH)
+    PKL_FILE = get_model_pkl_file_name(conn, model_id)
 
     words = get_words_missing_scores(conn, model_id)
-    inferred_scores = infer(words)
+    inferred_scores = infer(PKL_FILE, words)
 
     for word, score in tqdm.tqdm(inferred_scores):
         tqdm.tqdm.write(

@@ -30,7 +30,7 @@ RAW_WORDLIST_FILE = config["create_db"]["RAW_WORDLIST"]
 SCORED_WORDLIST_FILE = config["create_db"]["SCORED_WORDLIST"]
 WORDS_APPROVED = config["create_db"]["WORDS_APPROVED"]
 WORDS_REJECTED = config["create_db"]["WORDS_REJECTED"]
-DATABASE_FILE = config["create_db"].get("DATABASE_FILE", "wordlist.db")
+DATABASE_FILE = config["db_file"]
 
 
 def get_clues_for_word(word: str, db_path: str = DATABASE_FILE) -> str:
@@ -458,12 +458,46 @@ def update_word_status(conn: sqlite3.Connection, word: str, new_status: str) -> 
             tqdm.write(
                 f"{c_green}Success:{c_end} Updated status of '{word_upper}' from '{current_status}' to '{new_status}'."
             )
+            return True
         else:
             tqdm.write(
                 f"{c_yellow}Notice:{c_end} The word '{word_upper}' already has status '{new_status}'. No update needed."
             )
+            return False
 
     except sqlite3.Error as e:
         tqdm.write(f"{c_red}SQLite Error:{c_end} {e}")
         conn.rollback()
         raise
+
+
+def get_model_pkl_file_name(conn: sqlite3.Connection, model_id: int) -> str:
+    """
+    Retrieves the pkl_file_name for a given model ID from the 'model' table.
+
+    :param conn: An active sqlite3.Connection object.
+    :param model_id: The ID of the model to retrieve.
+
+    :return: The pkl_file_name associated with the given model ID.
+
+    :raises ValueError: If the model ID does not exist in the table.
+    :raises sqlite3.Error: If a database error occurs.
+    """
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT pkl_file_name
+            FROM model
+            WHERE id = ?
+            """,
+            (model_id,),
+        )
+        result = cur.fetchone()
+        if result:
+            return result[0]
+        else:
+            raise ValueError(f"Model with ID {model_id} does not exist.")
+    except sqlite3.Error as e:
+        # Optionally, you can log the error or handle it as needed
+        raise sqlite3.Error(f"An error occurred while accessing the database: {e}")

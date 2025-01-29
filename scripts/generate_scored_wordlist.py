@@ -32,9 +32,7 @@ def main():
         config = yaml.safe_load(f)
 
     # Filenames from config
-    DATABASE_FILE = config["generate_scored_wordlist"].get(
-        "DATABASE_FILE", "wordlist.db"
-    )
+    DATABASE_FILE = config["db_file"]
     SCORED_WORDLIST_JSON = config["generate_scored_wordlist"]["SCORED_WORDLIST"]
     SORTED_WORDLIST_JSON = config["generate_scored_wordlist"]["SORTED_WORDLIST"]
     SCORED_WORDLIST_TXT = config["generate_scored_wordlist"]["SCORED_WORDLIST_TXT"]

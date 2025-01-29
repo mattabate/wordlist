@@ -69,7 +69,7 @@ def update_rankings(conn, approved_json, rejected_json):
 
 def main():
     config = load_config(CONFIG_FILE)
-    database_file = config["create_db"].get("DATABASE_FILE", "wordlist.db")
+    database_file = config["db_file"]
     approved_json = config["create_db"]["WORDS_APPROVED"]
     rejected_json = config["create_db"]["WORDS_REJECTED"]
 

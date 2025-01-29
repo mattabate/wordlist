@@ -1,31 +1,24 @@
+
+
+db_file: "wordlist.db" # master wordlist database
+intake_manually_sort_words: "data/inputs/manually_sort_words.json" # read file for sorting app
+
+
 # Application configuration
 generate_scored_wordlist:
   RAW_WORDLIST:  "data/raw/raw_wordlist.json"
-  MODEL_FILE: "scripts/models/saved_preferences.pkl"
   SCORED_WORDLIST: "data/matts_wordlist/scored_wordlist.json"
   SORTED_WORDLIST: "data/matts_wordlist/sorted_wordlist.json"
   SCORED_WORDLIST_TXT: "data/matts_wordlist/matts_wordlist.txt"
 
-manually_sort_words:
-  RAW_WORDLIST:  "data/raw/raw_wordlist.json"
-  MODEL_FILE: "scripts/models/saved_preferences.pkl"
-  WORDLIST_SOURCE: "data/inputs/manually_sort_words.json" # read file for sorting app
-  WORDS_APPROVED: "data/raw/approved.json" # where approved words go
-  WORDS_REJECTED: "data/raw/rejected.json" # where rejected words go
-
-
 assess_svm:
-  MODEL_FILE: "scripts/models/saved_preferences.pkl"
   WORDS_APPROVED: "data/raw/approved.json" # where approved words go
   WORDS_REJECTED: "data/raw/rejected.json" # where rejected words go
 
 train_svm:
-  MODEL_FILE: "scripts/models/new_preferences.pkl"
   WORDS_APPROVED: "data/raw/approved.json" # where approved words go
   WORDS_REJECTED: "data/raw/rejected.json" # where rejected words go
 
-model:
-  MODEL_FILE: "scripts/models/saved_preferences.pkl"
 
 
 create_db:
@@ -33,5 +26,3 @@ create_db:
   SCORED_WORDLIST: "data/matts_wordlist/scored_wordlist.json"
   WORDS_APPROVED: "data/raw/approved.json"
   WORDS_REJECTED: "data/raw/rejected.json"
-
-  DATABASE_FILE: "wordlist.db" # file that is saved to

@@ -14,9 +14,9 @@ from models.database import (
 )
 from utils.wordlist import parse_file_to_dict
 
-
-DATABASE_FILE = "wordlist.db"
-
+with open("scripts/config.yml") as file:
+    config = yaml.safe_load(file)
+    DATABASE_FILE = config["db_file"]
 
 if __name__ == "__main__":
 

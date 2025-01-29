@@ -7,9 +7,12 @@ Usage:
 
 import sqlite3
 import os
+import yaml
 
 # Adjust this path if your DB file is elsewhere or dynamically loaded.
-DATABASE_FILE = "wordlist.db"
+with open("scripts/config.yml") as file:
+    config = yaml.safe_load(file)
+    DATABASE_FILE = config["db_file"]
 
 
 def migrate_add_sources_and_source_word(db_path: str):
