@@ -11,8 +11,11 @@ Usage:
 
 import sqlite3
 import os
+import yaml
 
-DATABASE_FILE = "wordlist.db"
+with open("scripts/config.yml") as file:
+    config = yaml.safe_load(file)
+    DATABASE_FILE = config["db_file"]
 
 
 def migrate_sources_len_200(db_path: str):

@@ -27,20 +27,15 @@ from PyQt5.QtWidgets import (
 
 from models.database import get_clues_for_word, update_word_status, get_words
 from models.svm import infer
-from utils.json import append_json, remove_from_json, load_json
-from utils.printing import c_red, c_green, c_yellow, c_end
+from utils.json import remove_from_json, load_json
 
 # Configuration loading
 with open("scripts/config.yml") as file:
     config = yaml.safe_load(file)
-    RAW_WORDLIST = config["manually_sort_words"]["RAW_WORDLIST"]
-    WORDS_APPROVED_JSON = config["manually_sort_words"]["WORDS_APPROVED"]
-    WORDS_REJECTED = config["manually_sort_words"]["WORDS_REJECTED"]
-    WORDLIST_SOURCE = config["manually_sort_words"]["WORDLIST_SOURCE"]
+    WORDLIST_SOURCE = config["intake_manually_sort_words"]
+    DB_PATH = config["db_file"]
 
 _max_words_considered = 2000
-
-DB_PATH = "wordlist.db"
 
 
 class WordSortingApp(QWidget):
@@ -55,7 +50,7 @@ class WordSortingApp(QWidget):
         words_considered = load_json(WORDLIST_SOURCE)
         if len(words_considered) > _max_words_considered:
             words_considered = words_considered[:_max_words_considered]
-        scored_words = infer(words_considered)
+        scored_words = infer("models/saved_preferences.pkl", words_considered)
 
         self.words_considered = [word for word, _ in scored_words[::-1]]
 
@@ -227,8 +222,6 @@ class WordSortingApp(QWidget):
         try:
             # Update the status in the database to 'rejected'
             update_word_status(self.conn, word, "rejected")
-            # Remove the word from RAW_WORDLIST and WORDLIST_SOURCE
-            remove_from_json(RAW_WORDLIST, word)
             remove_from_json(WORDLIST_SOURCE, word)
             self.word_index += 1
             self.process_next_word()
@@ -249,10 +242,8 @@ class WordSortingApp(QWidget):
         entered_word = self.undo_input.toPlainText().strip().upper()
         print("word to undo:", entered_word)
         try:
-            if remove_from_json(WORDS_REJECTED, entered_word):
+            if update_word_status(self.conn, entered_word, "approved"):
                 # Update the status back to 'unchecked' in the database
-                update_word_status(self.conn, entered_word, "approved")
-                append_json(RAW_WORDLIST, entered_word)
                 QMessageBox.information(
                     self, "Undo Successful", f"'{entered_word}' has been restored."
                 )

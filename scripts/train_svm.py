@@ -21,9 +21,7 @@ def load_config(config_file):
 CONFIG_FILE = "scripts/config.yml"
 
 config = load_config(CONFIG_FILE)
-
-DATABASE_FILE = config["create_db"].get("DATABASE_FILE", "wordlist.db")
-TRAIN_PKL_MODL = config["train_svm"]["MODEL_FILE"]
+DATABASE_FILE = config["db_file"]
 
 if __name__ == "__main__":
     conn = sqlite3.connect(DATABASE_FILE)
