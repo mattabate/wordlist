@@ -30,10 +30,10 @@ def load_config(config_file):
 # Load configuration from config.yml
 # -----------------------------
 config = load_config(CONFIG_FILE)
-RAW_WORDLIST_FILE = config["create_db"]["RAW_WORDLIST"]
-SCORED_WORDLIST_FILE = config["create_db"]["SCORED_WORDLIST"]
-WORDS_APPROVED = config["create_db"]["WORDS_APPROVED"]
-WORDS_REJECTED = config["create_db"]["WORDS_REJECTED"]
+RAW_WORDLIST_FILE = ""  # INSERT
+SCORED_WORDLIST_FILE = ""  # INSERT
+WORDS_APPROVED = ""  # INSERT
+WORDS_REJECTED = ""  # INSERT
 DATABASE_FILE = config["db_file"]
 
 

@@ -26,10 +26,6 @@ def load_config(config_file):
 config = load_config(CONFIG_FILE)
 
 # File paths loaded from the "create_db" section.
-RAW_WORDLIST_FILE = config["create_db"]["RAW_WORDLIST"]
-SCORED_WORDLIST_FILE = config["create_db"]["SCORED_WORDLIST"]
-WORDS_APPROVED = config["create_db"]["WORDS_APPROVED"]
-WORDS_REJECTED = config["create_db"]["WORDS_REJECTED"]
 DATABASE_FILE = config["db_file"]
 
 
