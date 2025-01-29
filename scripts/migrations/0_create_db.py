@@ -40,6 +40,59 @@ DATABASE_FILE = config["create_db"].get("DATABASE_FILE", "wordlist.db")
 # -----------------------------
 # Update functions
 # -----------------------------
+
+
+def create_table(conn):
+    """
+    Creates the 'wordlist' table in the connected SQLite database.
+    'answers' and 'status' are defined as NOT NULL.
+    """
+    create_table_sql = """
+    CREATE TABLE IF NOT EXISTS wordlist (
+        answers TEXT NOT NULL PRIMARY KEY CHECK(length(answers) BETWEEN 2 AND 40 AND answers = UPPER(answers)),
+        clues   TEXT,
+        scores  INTEGER CHECK (scores IS NULL OR scores < 100),
+        status  TEXT NOT NULL CHECK( status IN ('unchecked','approved','rejected') )
+    );
+    """
+    conn.execute(create_table_sql)
+    conn.commit()
+
+
+def create_indexes(conn):
+    """
+    Creates indexes on columns to facilitate fast searching.
+    """
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_answers ON wordlist(answers);")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_scores ON wordlist(scores);")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_status ON wordlist(status);")
+    conn.commit()
+
+
+def print_schema(conn):
+    """
+    Prints the schema for the 'wordlist' table.
+    """
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(wordlist);")
+    rows = cursor.fetchall()
+    print("\nDatabase schema for table 'wordlist':")
+    print(
+        "{:<5} {:<10} {:<20} {:<8} {:<10} {:<5}".format(
+            "cid", "name", "type", "notnull", "dflt_value", "pk"
+        )
+    )
+    print("-" * 60)
+    for row in rows:
+        cid, name, type_, notnull, dflt_value, pk = row
+        print(
+            "{:<5} {:<10} {:<20} {:<8} {:<10} {:<5}".format(
+                cid, name, type_, notnull, str(dflt_value), pk
+            )
+        )
+    print()
+
+
 def initialize_entries(conn):
     """
     (1) Inserts missing words into the database.
@@ -206,10 +259,10 @@ def main():
         conn = sqlite3.connect(DATABASE_FILE)
         try:
             print("Creating table...")
-            models.database.create_table(conn)
+            create_table(conn)
             print("Creating indexes...")
-            models.database.create_indexes(conn)
-            models.database.print_schema(conn)
+            create_indexes(conn)
+            print_schema(conn)
 
             # Phase 1: Initialize entries (insert any missing words)
             initialize_entries(conn)

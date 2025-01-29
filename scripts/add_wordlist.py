@@ -104,10 +104,15 @@ if __name__ == "__main__":
 
     # Add missing words
     for word in tqdm.tqdm(words_to_add):
-        tqdm.tqdm.write(
-            f"Adding {utils.printing.c_yellow}{word}{utils.printing.c_end} to the database. List score: {my_dict[word]}"
-        )
-        add_word(conn, word)
+        clues_found = add_word(conn, word)
+        if clues_found:
+            tqdm.tqdm.write(
+                f"Added {utils.printing.c_yellow}{word}{utils.printing.c_end} to the database {utils.printing.c_green}with clues{utils.printing.c_end}. List score: {my_dict[word]}."
+            )
+        else:
+            tqdm.tqdm.write(
+                f"Added {utils.printing.c_yellow}{word}{utils.printing.c_end} to the database {utils.printing.c_pink}witout clues{utils.printing.c_end}. List score: {my_dict[word]}. No clues found."
+            )
 
     # Add all words to this source in DB
     tqdm.tqdm.write(

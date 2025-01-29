@@ -33,57 +33,6 @@ WORDS_REJECTED = config["create_db"]["WORDS_REJECTED"]
 DATABASE_FILE = config["create_db"].get("DATABASE_FILE", "wordlist.db")
 
 
-def create_table(conn):
-    """
-    Creates the 'wordlist' table in the connected SQLite database.
-    'answers' and 'status' are defined as NOT NULL.
-    """
-    create_table_sql = """
-    CREATE TABLE IF NOT EXISTS wordlist (
-        answers TEXT NOT NULL PRIMARY KEY CHECK(length(answers) BETWEEN 2 AND 40 AND answers = UPPER(answers)),
-        clues   TEXT,
-        scores  INTEGER CHECK (scores IS NULL OR scores < 100),
-        status  TEXT NOT NULL CHECK( status IN ('unchecked','approved','rejected') )
-    );
-    """
-    conn.execute(create_table_sql)
-    conn.commit()
-
-
-def create_indexes(conn):
-    """
-    Creates indexes on columns to facilitate fast searching.
-    """
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_answers ON wordlist(answers);")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_scores ON wordlist(scores);")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_status ON wordlist(status);")
-    conn.commit()
-
-
-def print_schema(conn):
-    """
-    Prints the schema for the 'wordlist' table.
-    """
-    cursor = conn.cursor()
-    cursor.execute("PRAGMA table_info(wordlist);")
-    rows = cursor.fetchall()
-    print("\nDatabase schema for table 'wordlist':")
-    print(
-        "{:<5} {:<10} {:<20} {:<8} {:<10} {:<5}".format(
-            "cid", "name", "type", "notnull", "dflt_value", "pk"
-        )
-    )
-    print("-" * 60)
-    for row in rows:
-        cid, name, type_, notnull, dflt_value, pk = row
-        print(
-            "{:<5} {:<10} {:<20} {:<8} {:<10} {:<5}".format(
-                cid, name, type_, notnull, str(dflt_value), pk
-            )
-        )
-    print()
-
-
 def get_clues_for_word(word: str, db_path: str = DATABASE_FILE) -> str:
     """
     Returns the clues string from the 'wordlist' table for a given word.
@@ -387,17 +336,21 @@ def add_word(conn: sqlite3.Connection, word: str):
         tqdm.write(
             f"{c_yellow}Warning:{c_end} Word {word_upper}already exists in the database. Skipping"
         )
-        return
+        return False
 
     # Insert
+    clues = fetch_clues(word=word_upper)
     cursor.execute(
         """
         INSERT INTO wordlist (answers, clues, scores, status)
         VALUES (?, ?, ?, ?)
     """,
-        (word_upper, fetch_clues(word=word_upper), None, "unchecked"),
+        (word_upper, clues, None, "unchecked"),
     )
     conn.commit()
+    if clues:
+        return True
+    return False
 
 
 def add_model(conn, time_trained: str, training_score: float) -> int:
