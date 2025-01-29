@@ -34,7 +34,7 @@ RAW_WORDLIST_FILE = config["create_db"]["RAW_WORDLIST"]
 SCORED_WORDLIST_FILE = config["create_db"]["SCORED_WORDLIST"]
 WORDS_APPROVED = config["create_db"]["WORDS_APPROVED"]
 WORDS_REJECTED = config["create_db"]["WORDS_REJECTED"]
-DATABASE_FILE = config["create_db"].get("DATABASE_FILE", "wordlist.db")
+DATABASE_FILE = config["db_file"]
 
 
 # -----------------------------

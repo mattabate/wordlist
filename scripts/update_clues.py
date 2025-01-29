@@ -10,11 +10,16 @@ import sqlite3
 from tqdm import tqdm
 from utils.printing import c_red, c_green, c_yellow, c_end
 from models.database import update_clues_for_word
+import yaml
+
+with open("scripts/config.yml") as file:
+    config = yaml.safe_load(file)
+    DB_PATH = config["db_file"]
 
 
 def main():
     # 1. Connect to DB
-    conn = sqlite3.connect("wordlist.db")
+    conn = sqlite3.connect(DB_PATH)
 
     # 2. Get words with missing or empty clues, sorted by `clues_last_updated` (earliest first)
     cur = conn.cursor()
