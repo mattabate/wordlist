@@ -11,6 +11,7 @@ from models.database import (
     create_source_word,
     add_word,
     get_words,
+    fetch_clues,
 )
 from utils.wordlist import parse_file_to_dict
 
@@ -27,8 +28,13 @@ if __name__ == "__main__":
         "-i",
         help="Name of the wordlist folder to load config from (e.g., 'spreadthewordlist').",
     )
+    parser.add_argument(
+        "--skip_clues",
+        action="store_true",
+        help="If set, clues will be skipped.",
+    )
     args = parser.parse_args()
-
+    f_skip_clues = args.skip_clues
     # 2. If no input provided, print help and exit
     if not args.input:
         print(
@@ -104,15 +110,29 @@ if __name__ == "__main__":
 
     # Add missing words
     for word in tqdm.tqdm(words_to_add):
-        clues_found = add_word(conn, word)
-        if clues_found:
-            tqdm.tqdm.write(
-                f"Added {utils.printing.c_yellow}{word}{utils.printing.c_end} to the database {utils.printing.c_green}with clues{utils.printing.c_end}. List score: {my_dict[word]}."
-            )
+        word_upper = word.upper()
+        if not f_skip_clues:
+            clues = fetch_clues(word=word_upper)
+            if clues:
+                tqdm.tqdm.write(
+                    f"Clues {utils.printing.c_green}Found{utils.printing.c_end}. "
+                    + f"Adding {utils.printing.c_yellow}{word}{utils.printing.c_end} to the database. "
+                    + f"List score: {my_dict[word]}."
+                )
+            else:
+                tqdm.tqdm.write(
+                    f"Clues {utils.printing.c_pink}Not Availible{utils.printing.c_end}. "
+                    + f"Adding {utils.printing.c_yellow}{word}{utils.printing.c_end} to the database. "
+                    + f"List score: {my_dict[word]}."
+                )
         else:
+            clues = None
             tqdm.tqdm.write(
-                f"Added {utils.printing.c_yellow}{word}{utils.printing.c_end} to the database {utils.printing.c_pink}witout clues{utils.printing.c_end}. List score: {my_dict[word]}. No clues found."
+                f"{utils.printing.c_pink}Skipping{utils.printing.c_end} API call for without clues. "
+                + f"Adding {utils.printing.c_yellow}{word}{utils.printing.c_end} to the database. "
+                + f"List score: {my_dict[word]}."
             )
+        add_word(conn, word, clues)
 
     # Add all words to this source in DB
     tqdm.tqdm.write(

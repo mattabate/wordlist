@@ -318,35 +318,30 @@ def create_source_word(
             ) from e
 
 
-def add_word(conn: sqlite3.Connection, word: str):
+def add_word(conn: sqlite3.Connection, word: str, clues: str) -> None:
     """
     Adds a word if not present, then returns the SQLite internal rowid.
     """
-    word_upper = word.upper()
     cursor = conn.cursor()
 
     # Check if the word already exists
-    cursor.execute("SELECT rowid FROM wordlist WHERE answers = ?", (word_upper,))
+    cursor.execute("SELECT rowid FROM wordlist WHERE answers = ?", (word,))
     row = cursor.fetchone()
     if row is not None:
         tqdm.write(
-            f"{c_yellow}Warning:{c_end} Word {word_upper}already exists in the database. Skipping"
+            f"{c_yellow}Warning:{c_end} Word {word}already exists in the database. Skipping"
         )
-        return False
+        return
 
     # Insert
-    clues = fetch_clues(word=word_upper)
     cursor.execute(
         """
         INSERT INTO wordlist (answers, clues, scores, status)
         VALUES (?, ?, ?, ?)
     """,
-        (word_upper, clues, None, "unchecked"),
+        (word, clues, None, "unchecked"),
     )
     conn.commit()
-    if clues:
-        return True
-    return False
 
 
 def add_model(conn, time_trained: str, training_score: float) -> int:
