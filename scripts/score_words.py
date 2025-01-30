@@ -63,11 +63,20 @@ def get_words_missing_scores(conn, model_id: int) -> list[str]:
 # ------------------------------------------------------------------------------
 
 
-def infer(PKL_FILE: str, words: List[str]) -> List[Tuple[str, float]]:
-    """
-    Return a sorted list of (word, score) tuples, from most assumed good (score high)
-    to most assumed bad (score low).
-    """
+def main():
+    parser = argparse.ArgumentParser(
+        description="Show words missing scores for a given model."
+    )
+    parser.add_argument("--model", type=int, required=True, help="Model ID to check.")
+    args = parser.parse_args()
+
+    model_id = args.model
+
+    conn = sqlite3.connect(DB_PATH)
+    PKL_FILE = get_model_pkl_file_name(conn, model_id)
+
+    words = get_words_missing_scores(conn, model_id)
+
     chunk_size = 1500
     words_considered = [add_prefix(w, get_clues_for_word(w)) for w in words]
     word_scores = []
@@ -82,38 +91,19 @@ def infer(PKL_FILE: str, words: List[str]) -> List[Tuple[str, float]]:
         batch_scores = clf.decision_function(batch_out)
 
         # Note: 'j - i' aligns with batch indexing vs. global indexing
-        word_scores += [
+        new_words = [
             (words[j], float(batch_scores[j - i]))
             for j in range(i, min(i + chunk_size, len(words)))
         ]
 
+        for word, score in tqdm.tqdm(new_words):
+            tqdm.tqdm.write(
+                f"{utils.printing.c_yellow}Adding{utils.printing.c_end} {word}: {score}"
+            )
+            add_word_model_score(conn, word, model_id, score)
+        word_scores += new_words
+
         time.sleep(0.1)  # Pause to avoid overloading
-
-    # Sort high-to-low by decision_function score
-    word_scores_sorted = sorted(word_scores, key=lambda x: x[1], reverse=True)
-    return word_scores_sorted
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Show words missing scores for a given model."
-    )
-    parser.add_argument("--model", type=int, required=True, help="Model ID to check.")
-    args = parser.parse_args()
-
-    model_id = args.model
-
-    conn = sqlite3.connect(DB_PATH)
-    PKL_FILE = get_model_pkl_file_name(conn, model_id)
-
-    words = get_words_missing_scores(conn, model_id)
-    inferred_scores = infer(PKL_FILE, words)
-
-    for word, score in tqdm.tqdm(inferred_scores):
-        tqdm.tqdm.write(
-            f"{utils.printing.c_yellow}Adding{utils.printing.c_end} {word}: {score}"
-        )
-        add_word_model_score(conn, word, model_id, score)
 
     conn.close()
 
