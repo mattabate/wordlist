@@ -50,7 +50,7 @@ class WordSortingApp(QWidget):
         words_considered = load_json(WORDLIST_SOURCE)
         if len(words_considered) > _max_words_considered:
             words_considered = words_considered[:_max_words_considered]
-        scored_words = infer("models/saved_preferences.pkl", words_considered)
+        scored_words = infer("scripts/models/saved_preferences.pkl", words_considered)
 
         self.words_considered = [word for word, _ in scored_words[::-1]]
 
