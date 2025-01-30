@@ -52,6 +52,18 @@ def main():
         """,
         (model_id,),
     )
+    # cur.execute(
+    #     """
+    #     SELECT wms.word, wms.score
+    #     FROM word_model_score wms
+    #     JOIN wordlist w
+    #         ON wms.word = w.answers
+    #     WHERE wms.model = ?
+    #     AND w.status != 'rejected'
+    #     AND (w.status = 'approved' OR wms.score>0)
+    #     """,
+    #     (model_id,),
+    # )
     results = cur.fetchall()
     conn.close()
 
