@@ -41,29 +41,31 @@ def main():
     conn = sqlite3.connect(DATABASE_FILE)
     cur = conn.cursor()
 
-    cur.execute(
-        """
-        SELECT wms.word, wms.score
-        FROM word_model_score wms
-        JOIN wordlist w
-            ON wms.word = w.answers
-        WHERE wms.model = ?
-        AND w.status != 'rejected'
-        """,
-        (model_id,),
-    )
-    # cur.execute(
-    #     """
-    #     SELECT wms.word, wms.score
-    #     FROM word_model_score wms
-    #     JOIN wordlist w
-    #         ON wms.word = w.answers
-    #     WHERE wms.model = ?
-    #     AND w.status != 'rejected'
-    #     AND (w.status = 'approved' OR wms.score>0)
-    #     """,
-    #     (model_id,),
-    # )
+    if args.full:
+        cur.execute(
+            """
+            SELECT wms.word, wms.score
+            FROM word_model_score wms
+            JOIN wordlist w
+                ON wms.word = w.answers
+            WHERE wms.model = ?
+            AND w.status != 'rejected'
+            """,
+            (model_id,),
+        )
+    else:
+        cur.execute(
+            """
+            SELECT wms.word, wms.score
+            FROM word_model_score wms
+            JOIN wordlist w
+                ON wms.word = w.answers
+            WHERE wms.model = ?
+            AND w.status != 'rejected'
+            # AND (w.status = 'approved' OR wms.score>0)
+            """,
+            (model_id,),
+        )
     results = cur.fetchall()
     conn.close()
 
@@ -73,7 +75,7 @@ def main():
 
     # 4. Separate into (word, raw_score)
     #    Sort primarily by score descending, secondarily by word ascending
-    words_and_scores = [(row[0], float(row[1])) for row in results]
+    words_and_scores = [(row[0], max(-1.0, min(float(row[1]), 1.0))) for row in results]
     words_and_scores.sort(key=lambda x: (-x[1], x[0]))
     word_closest_to_zero = min(words_and_scores, key=lambda x: abs(x[1]))
     closest_word, closest_score = word_closest_to_zero
