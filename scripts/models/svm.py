@@ -150,18 +150,19 @@ def train_model(X_train_vectors: List[List[float]], y_train: List[int]) -> SVC:
 
     param_grid = {
         "kernel": ["linear", "rbf"],
-        "C": [1, 10],
-        "gamma": [0.1, 1, 5, 10],  # only used for 'rbf' kernel
+        "C": [1, 10, 15],
+        "gamma": [1, 5, 10],  # only used for 'rbf' kernel
     }
 
     grid_search = GridSearchCV(
-        SVC(),
+        SVC(tol=1e-5, max_iter=100000),  # Set lower tolerance and higher max iterations
         param_grid=param_grid,
         cv=5,
         scoring="accuracy",
         verbose=3,
-        n_jobs=-1,  # use all available cores
+        n_jobs=-1,
     )
+
     grid_search.fit(X_train_vectors, y_train)
 
     train_end_time = time.time()
