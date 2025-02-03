@@ -39,3 +39,10 @@ def remove_from_json(json_file: str, entry):
             return False
         finally:
             fcntl.flock(f, fcntl.LOCK_UN)
+
+
+def write_json(json_name, data):
+    with open(json_name, "w") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        json.dump(data, f, indent=4, ensure_ascii=False)
+        fcntl.flock(f, fcntl.LOCK_UN)
