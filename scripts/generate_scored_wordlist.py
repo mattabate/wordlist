@@ -62,7 +62,7 @@ def main():
                 ON wms.word = w.answers
             WHERE wms.model = ?
             AND w.status != 'rejected'
-            # AND (w.status = 'approved' OR wms.score>0)
+            AND (w.status = 'approved' OR wms.score>0)
             """,
             (model_id,),
         )

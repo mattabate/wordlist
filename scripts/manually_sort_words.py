@@ -136,16 +136,20 @@ class WordSortingApp(QWidget):
         self.conn = sqlite3.connect(DB_PATH)
 
         self.source = WORDLIST_SOURCE
+        self.words_omitted = get_words(conn=self.conn, status="rejected")
+        self.words_approved = get_words(conn=self.conn, status="approved")
+        self.words_seen = set(self.words_omitted + self.words_approved)
+
         words_considered = load_json(WORDLIST_SOURCE)
+        words_considered = [
+            word for word in words_considered if word not in self.words_seen
+        ]
         if len(words_considered) > _max_words_considered:
             words_considered = words_considered[:_max_words_considered]
         scored_words = infer("scripts/models/saved_preferences.pkl", words_considered)
         self.words_considered = [word for word, _ in scored_words[::-1]]
 
         # Retrieve words already processed (approved or rejected)
-        self.words_omitted = get_words(conn=self.conn, status="rejected")
-        self.words_approved = get_words(conn=self.conn, status="approved")
-        self.words_seen = set(self.words_omitted + self.words_approved)
         self.total_words = len(self.words_considered)
         self.word_index = 0  # Global pointer into the list of words
 
