@@ -44,7 +44,7 @@ def main():
     if args.full:
         cur.execute(
             """
-            SELECT wms.word, wms.score
+            SELECT wms.word, wms.score, w.status
             FROM word_model_score wms
             JOIN wordlist w
                 ON wms.word = w.answers
@@ -56,13 +56,13 @@ def main():
     else:
         cur.execute(
             """
-            SELECT wms.word, wms.score
+            SELECT wms.word, wms.score, w.status
             FROM word_model_score wms
             JOIN wordlist w
                 ON wms.word = w.answers
             WHERE wms.model = ?
             AND w.status != 'rejected'
-            AND (w.status = 'approved' OR wms.score>0)
+            AND (w.status = 'approved' OR wms.score>0.5)
             """,
             (model_id,),
         )
@@ -75,7 +75,18 @@ def main():
 
     # 4. Separate into (word, raw_score)
     #    Sort primarily by score descending, secondarily by word ascending
-    words_and_scores = [(row[0], max(-1.0, min(float(row[1]), 1.0))) for row in results]
+
+    unchecked_words_and_scores = [
+        (row[0], min(float(row[1]), 1.0)) for row in results if row[2] == "unchecked"
+    ]
+    min_score_unchecked = min([x for _, x in unchecked_words_and_scores], default=0)
+    approved_words_and_scores = [
+        (row[0], min(max(float(row[1]), min_score_unchecked), 1.2))
+        for row in results
+        if row[2] == "approved"
+    ]
+
+    words_and_scores = unchecked_words_and_scores + approved_words_and_scores
     words_and_scores.sort(key=lambda x: (-x[1], x[0]))
     word_closest_to_zero = min(words_and_scores, key=lambda x: abs(x[1]))
     closest_word, closest_score = word_closest_to_zero
