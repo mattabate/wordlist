@@ -81,7 +81,7 @@ def main():
     ]
     min_score_unchecked = min([x for _, x in unchecked_words_and_scores], default=0)
     approved_words_and_scores = [
-        (row[0], min(max(float(row[1]), min_score_unchecked), 1.2))
+        (row[0], min(max(float(row[1]), min_score_unchecked), 1))
         for row in results
         if row[2] == "approved"
     ]
