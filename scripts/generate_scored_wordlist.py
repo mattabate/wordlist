@@ -46,8 +46,8 @@ def main():
             """
             SELECT wms.word, wms.score, w.status
             FROM word_model_score wms
-            JOIN wordlist w
-                ON wms.word = w.answers
+            JOIN words w
+                ON wms.word = w.word
             WHERE wms.model = ?
             AND w.status != 'rejected'
             """,
@@ -58,8 +58,8 @@ def main():
             """
             SELECT wms.word, wms.score, w.status
             FROM word_model_score wms
-            JOIN wordlist w
-                ON wms.word = w.answers
+            JOIN words w
+                ON wms.word = w.word
             WHERE wms.model = ?
             AND w.status != 'rejected'
             AND (w.status = 'approved' OR wms.score>-0.1)
