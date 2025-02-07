@@ -124,18 +124,6 @@ def fetch_clues(word) -> str | None:
     return None
 
 
-def update_score(conn, word: str, score: int) -> int:
-    """
-    Updates the score for a given word in the 'words' table.
-    Returns the number of rows that were updated (usually 0 or 1).
-    """
-    word = word.upper()  # Ensure consistency with the DB
-    cursor = conn.cursor()
-    cursor.execute("UPDATE words SET scores = ? WHERE word = ?", (score, word))
-    conn.commit()
-    return cursor.rowcount
-
-
 def update_clues_for_word(conn: sqlite3.Connection, word: str) -> None:
     """
     Given a word, fetch its clues from an external API (fetch_clues)
@@ -336,10 +324,17 @@ def add_word(conn: sqlite3.Connection, word: str, clues: str) -> None:
     # Insert
     cursor.execute(
         """
-        INSERT INTO words (word, clues, scores, status)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO words (word, time_added, clues, clues_last_updated, status, status_last_updated)
+        VALUES (?, ?, ?, ?, ?, ?)
     """,
-        (word, clues, None, "unchecked"),
+        (
+            word,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+            clues,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+            "unchecked",
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+        ),
     )
     conn.commit()
 
