@@ -330,7 +330,7 @@ def add_word(conn: sqlite3.Connection, word: str, clues: str) -> None:
         (
             word,
             time.strftime("%Y-%m-%d %H:%M:%S"),
-            clues,
+            clues,  # begining of tim
             time.strftime("%Y-%m-%d %H:%M:%S"),
             "unchecked",
             time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -437,7 +437,12 @@ def update_word_status(conn: sqlite3.Connection, word: str, new_status: str) -> 
         # Update the status only if it's different
         if current_status != new_status:
             cur.execute(
-                "UPDATE words SET status = ? WHERE word = ?",
+                """
+                UPDATE words 
+                SET status = ?,
+                    status_last_updated = datetime('now')
+                WHERE word = ?
+                """,
                 (new_status, word_upper),
             )
             conn.commit()
