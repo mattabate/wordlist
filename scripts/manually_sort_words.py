@@ -6,11 +6,15 @@ This version shows four words at a time in a grid. Each word card contains
 its own buttons for Accept, Reject, Pass, and Google. A global progress label,
 undo rejection input, and Exit button are provided below the grid.
 """
-
+import os
+import sqlite3
 import sys
 import webbrowser
 import yaml
-import sqlite3
+
+import utils.json
+
+from utils.printing import c_blue, c_end
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
@@ -32,14 +36,29 @@ from models.database import (
     get_words,
     sort_words_by_score,
 )
-from models.svm import infer
 from utils.json import remove_from_json, load_json
 
 # Load configuration
 with open("scripts/config.yml") as file:
     config = yaml.safe_load(file)
+    inputs_dir = config["inputs_dir"]
     WORDLIST_SOURCE = config["intake_manually_sort_words"]
     DB_PATH = config["db_file"]
+
+if not os.path.exists(inputs_dir):
+    os.makedirs(inputs_dir)
+
+WORDLIST_SOURCE = os.path.join(inputs_dir, WORDLIST_SOURCE)
+
+if not os.path.exists(WORDLIST_SOURCE):
+    print(
+        f"""{c_blue}HALT{c_end}: Is this your first time running this script?
+I created a new directory and file called 'inputs'.
+Add the strings you are interested in sorting and try again
+"""
+    )
+    utils.json.write_json(WORDLIST_SOURCE, [])
+    exit()
 
 _max_words_considered = 2000
 

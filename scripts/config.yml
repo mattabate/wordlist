@@ -1,5 +1,6 @@
 db_file: "wordlist.db" # master wordlist database
-intake_manually_sort_words: "data/inputs/manually_sort_words.json" # read file for sorting app
+inputs_dir: "inputs" # directory for input files
+intake_manually_sort_words: "manually_sort_words.json" # read file for sorting app
 
 
 # Application configuration
