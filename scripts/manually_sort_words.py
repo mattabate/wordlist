@@ -36,11 +36,14 @@ from models.database import (
     get_words,
     sort_words_by_score,
 )
+
+from models.svm import infer
 from utils.json import remove_from_json, load_json
 
 # Load configuration
 with open("scripts/config.yml") as file:
     config = yaml.safe_load(file)
+
     inputs_dir = config["inputs_dir"]
     WORDLIST_SOURCE = config["intake_manually_sort_words"]
     DB_PATH = config["db_file"]

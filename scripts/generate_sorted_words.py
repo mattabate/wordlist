@@ -7,6 +7,7 @@ Usage:
     python3 generate_scored_wordlist.py --model 1
 """
 import models.database
+from utils.printing import c_red, c_green, c_yellow, c_end
 from utils.json import write_json
 import sqlite3
 import yaml
