@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script to update missing clues in the 'wordlist' table.
+Script to update missing clues in the 'words' table.
 
 Usage:
   python update_words.py
@@ -25,8 +25,8 @@ def main():
     cur = conn.cursor()
     cur.execute(
         """
-        SELECT answers
-        FROM wordlist
+        SELECT word
+        FROM words
         WHERE clues IS NULL OR clues = ''
         ORDER BY clues_last_updated ASC
     """

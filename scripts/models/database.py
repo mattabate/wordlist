@@ -31,14 +31,14 @@ DATABASE_FILE = config["db_file"]
 
 def get_clues_for_word(word: str, db_path: str = DATABASE_FILE) -> str:
     """
-    Returns the clues string from the 'wordlist' table for a given word.
+    Returns the clues string from the 'words' table for a given word.
     If the word is not found or has no clues, returns None.
     """
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        # Convert the input word to uppercase to match your DB's stored answers
-        cursor.execute("SELECT clues FROM wordlist WHERE answers = ?", (word.upper(),))
+        # Convert the input word to uppercase to match your DB's stored word
+        cursor.execute("SELECT clues FROM words WHERE word = ?", (word.upper(),))
         row = cursor.fetchone()
         return row[0] if row else None
     finally:
@@ -52,10 +52,10 @@ def get_words_and_clues(conn, status=""):
     """
     cur = conn.cursor()
     if status:
-        query = "SELECT answers, clues FROM wordlist WHERE status = ?;"
+        query = "SELECT word, clues FROM words WHERE status = ?;"
         cur.execute(query, (status,))
     else:
-        query = "SELECT answers, clues FROM wordlist;"
+        query = "SELECT word, clues FROM words;"
         cur.execute(query)
 
     rows = cur.fetchall()
@@ -69,14 +69,48 @@ def get_words(conn, status=""):
     """
     cur = conn.cursor()
     if status:
-        query = "SELECT answers FROM wordlist WHERE status = ?;"
+        query = "SELECT word FROM words WHERE status = ?;"
         cur.execute(query, (status,))
     else:
-        query = "SELECT answers FROM wordlist;"
+        query = "SELECT word FROM words;"
         cur.execute(query)
 
     rows = cur.fetchall()
     return [answer for answer, in rows]
+
+
+def sort_words_by_score(
+    conn: sqlite3.Connection, words: list[str], model_id: int, order: str = "desc"
+) -> list[str]:
+    """
+    Sorts a list of words by their scores for a given model ID.
+    The scores are fetched from the 'word_model_score' table in the database.
+
+    :param conn: An active sqlite3.Connection object.
+    :param words: A list of words to sort.
+    :param model_id: The ID of the model to use for scoring.
+    :param order: The order to sort the words in ('asc' or 'desc').
+
+    :return: A list of words sorted by their scores for the given model ID.
+    """
+    cur = conn.cursor()
+
+    # Fetch the scores for the given model ID
+    cur.execute(
+        """
+        SELECT word, score
+        FROM word_model_score
+        WHERE model = ?
+        AND word IN ({})
+        """.format(
+            ", ".join("?" for _ in words)
+        ),
+        (model_id, *words),
+    )
+    scores = dict(cur.fetchall())
+
+    # Sort the words by their scores
+    return sorted(words, key=lambda w: scores.get(w, 0), reverse=order == "desc")
 
 
 _NUM_CLUES = 6
@@ -124,33 +158,21 @@ def fetch_clues(word) -> str | None:
     return None
 
 
-def update_score(conn, word: str, score: int) -> int:
-    """
-    Updates the score for a given word in the 'wordlist' table.
-    Returns the number of rows that were updated (usually 0 or 1).
-    """
-    word = word.upper()  # Ensure consistency with the DB
-    cursor = conn.cursor()
-    cursor.execute("UPDATE wordlist SET scores = ? WHERE answers = ?", (score, word))
-    conn.commit()
-    return cursor.rowcount
-
-
 def update_clues_for_word(conn: sqlite3.Connection, word: str) -> None:
     """
     Given a word, fetch its clues from an external API (fetch_clues)
     and, if successful, update both the 'clues' and 'clues_last_updated'
-    fields in the 'wordlist' table.
+    fields in the 'words' table.
     """
     c = fetch_clues(word)
     if c is not None and c.strip():  # only update if clues is not empty
         cur = conn.cursor()
         cur.execute(
             """
-            UPDATE wordlist
+            UPDATE words
             SET clues = ?,
                 clues_last_updated = datetime('now')
-            WHERE answers = ?
+            WHERE word = ?
             """,
             (c, word.upper()),
         )
@@ -161,9 +183,9 @@ def update_clues_for_word(conn: sqlite3.Connection, word: str) -> None:
         cur = conn.cursor()
         cur.execute(
             """
-            UPDATE wordlist
+            UPDATE words
             SET clues_last_updated = datetime('now')
-            WHERE answers = ?
+            WHERE word = ?
             """,
             (word.upper(),),
         )
@@ -241,7 +263,7 @@ def create_source_word(
             score     INTEGER,
             FOREIGN KEY(source_id) REFERENCES sources(id)
                 ON UPDATE CASCADE ON DELETE CASCADE,
-            FOREIGN KEY(word_id) REFERENCES wordlist(answers)
+            FOREIGN KEY(word_id) REFERENCES words(word)
                 ON UPDATE CASCADE ON DELETE CASCADE,
             PRIMARY KEY (source_id, word_id)
         );
@@ -253,7 +275,7 @@ def create_source_word(
 
     :param conn:      An active sqlite3.Connection object
     :param source_id: The 'id' from the 'sources' table
-    :param word_id:   The 'answers' text PK from the 'wordlist' table
+    :param word_id:   The 'word' text PK from the 'words' table
     :param score:     An optional score for this specific source/word relationship
     :return: None
     """
@@ -325,7 +347,7 @@ def add_word(conn: sqlite3.Connection, word: str, clues: str) -> None:
     cursor = conn.cursor()
 
     # Check if the word already exists
-    cursor.execute("SELECT rowid FROM wordlist WHERE answers = ?", (word,))
+    cursor.execute("SELECT rowid FROM words WHERE word = ?", (word,))
     row = cursor.fetchone()
     if row is not None:
         tqdm.write(
@@ -336,10 +358,17 @@ def add_word(conn: sqlite3.Connection, word: str, clues: str) -> None:
     # Insert
     cursor.execute(
         """
-        INSERT INTO wordlist (answers, clues, scores, status)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO words (word, time_added, clues, clues_last_updated, status, status_last_updated)
+        VALUES (?, ?, ?, ?, ?, ?)
     """,
-        (word, clues, None, "unchecked"),
+        (
+            word,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+            clues,  # begining of tim
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+            "unchecked",
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+        ),
     )
     conn.commit()
 
@@ -391,7 +420,7 @@ def add_word_model_score(
 
     :param conn: A live sqlite3.Connection object.
     :param model_id: The integer ID of the model (foreign key to model.id).
-    :param word: The word to be scored (foreign key to wordlist.answers).
+    :param word: The word to be scored (foreign key to words.word).
     :param score: The floating-point score for this (word, model) pair.
 
     Note: Raises sqlite3.IntegrityError if (word, model) already exists,
@@ -414,7 +443,7 @@ def add_word_model_score(
 
 def update_word_status(conn: sqlite3.Connection, word: str, new_status: str) -> None:
     """
-    Updates the status of a given word in the 'wordlist' table.
+    Updates the status of a given word in the 'words' table.
 
     :param conn: An active sqlite3.Connection object.
     :param word: The word whose status needs to be updated.
@@ -428,7 +457,7 @@ def update_word_status(conn: sqlite3.Connection, word: str, new_status: str) -> 
 
     try:
         # Check if the word exists
-        cur.execute("SELECT status FROM wordlist WHERE answers = ?", (word_upper,))
+        cur.execute("SELECT status FROM words WHERE word = ?", (word_upper,))
         row = cur.fetchone()
 
         if row is None:
@@ -442,7 +471,12 @@ def update_word_status(conn: sqlite3.Connection, word: str, new_status: str) -> 
         # Update the status only if it's different
         if current_status != new_status:
             cur.execute(
-                "UPDATE wordlist SET status = ? WHERE answers = ?",
+                """
+                UPDATE words 
+                SET status = ?,
+                    status_last_updated = datetime('now')
+                WHERE word = ?
+                """,
                 (new_status, word_upper),
             )
             conn.commit()
