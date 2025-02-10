@@ -31,17 +31,17 @@ with open("scripts/config.yml") as file:
 
 def get_words_missing_scores(conn, model_id: int) -> list[str]:
     """
-    Get words in 'wordlist' that lack an entry in 'word_model_score' for this model.
+    Get words in 'words' that lack an entry in 'word_model_score' for this model.
     Returns an empty list if there's an error or raises, depending on how you want to handle it.
     """
     try:
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT w.answers
-            FROM wordlist w
+            SELECT w.word
+            FROM words w
             LEFT JOIN word_model_score wms
-                ON w.answers = wms.word
+                ON w.word = wms.word
                 AND wms.model = ?
             WHERE wms.word IS NULL
             """,

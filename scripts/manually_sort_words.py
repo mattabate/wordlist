@@ -26,7 +26,12 @@ from PyQt5.QtWidgets import (
     QMessageBox,
 )
 
-from models.database import get_clues_for_word, update_word_status, get_words
+from models.database import (
+    get_clues_for_word,
+    update_word_status,
+    get_words,
+    sort_words_by_score,
+)
 from models.svm import infer
 from utils.json import remove_from_json, load_json
 
@@ -146,8 +151,10 @@ class WordSortingApp(QWidget):
         ]
         if len(words_considered) > _max_words_considered:
             words_considered = words_considered[:_max_words_considered]
-        scored_words = infer("scripts/models/saved_preferences.pkl", words_considered)
-        self.words_considered = [word for word, _ in scored_words[::-1]]
+
+        self.words_considered = sort_words_by_score(
+            self.conn, words_considered, 2, "asc"
+        )
 
         # Retrieve words already processed (approved or rejected)
         self.total_words = len(self.words_considered)
