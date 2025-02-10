@@ -1,7 +1,6 @@
-
-
 db_file: "wordlist.db" # master wordlist database
-intake_manually_sort_words: "data/inputs/manually_sort_words.json" # read file for sorting app
+inputs_dir: "inputs" # directory for input files
+intake_manually_sort_words: "manually_sort_words.json" # read file for sorting app
 
 
 # Application configuration
@@ -9,11 +8,3 @@ generate_scored_wordlist:
   SCORED_WORDLIST: "data/matts_wordlist/scored_wordlist.json"
   SORTED_WORDLIST: "data/matts_wordlist/sorted_wordlist.json"
   SCORED_WORDLIST_TXT: "data/matts_wordlist/matts_wordlist.txt"
-
-assess_svm:
-  WORDS_APPROVED: "data/raw/approved.json" # where approved words go
-  WORDS_REJECTED: "data/raw/rejected.json" # where rejected words go
-
-train_svm:
-  WORDS_APPROVED: "data/raw/approved.json" # where approved words go
-  WORDS_REJECTED: "data/raw/rejected.json" # where rejected words go
