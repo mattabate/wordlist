@@ -79,6 +79,40 @@ def get_words(conn, status=""):
     return [answer for answer, in rows]
 
 
+def sort_words_by_score(
+    conn: sqlite3.Connection, words: list[str], model_id: int, order: str = "desc"
+) -> list[str]:
+    """
+    Sorts a list of words by their scores for a given model ID.
+    The scores are fetched from the 'word_model_score' table in the database.
+
+    :param conn: An active sqlite3.Connection object.
+    :param words: A list of words to sort.
+    :param model_id: The ID of the model to use for scoring.
+    :param order: The order to sort the words in ('asc' or 'desc').
+
+    :return: A list of words sorted by their scores for the given model ID.
+    """
+    cur = conn.cursor()
+
+    # Fetch the scores for the given model ID
+    cur.execute(
+        """
+        SELECT word, score
+        FROM word_model_score
+        WHERE model = ?
+        AND word IN ({})
+        """.format(
+            ", ".join("?" for _ in words)
+        ),
+        (model_id, *words),
+    )
+    scores = dict(cur.fetchall())
+
+    # Sort the words by their scores
+    return sorted(words, key=lambda w: scores.get(w, 0), reverse=order == "desc")
+
+
 _NUM_CLUES = 6
 
 
