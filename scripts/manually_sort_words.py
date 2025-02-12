@@ -36,8 +36,6 @@ from models.database import (
     get_words,
     sort_words_by_score,
 )
-
-from models.svm import infer
 from utils.json import remove_from_json, load_json
 
 # Load configuration
