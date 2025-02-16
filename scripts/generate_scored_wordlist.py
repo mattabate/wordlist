@@ -4,7 +4,7 @@ Generate a scored wordlist for a given model, normalized to [0..50],
 and sorted by descending score, then alphabetically.
 
 Usage:
-    python3 generate_scored_wordlist.py --model 1
+    python3 generate_scored_wordlist.py --model 1 [--min_score 0.8]
 """
 
 import argparse
@@ -35,16 +35,21 @@ def main():
     )
     parser.add_argument("--model", type=int, required=True, help="Model ID to process.")
     parser.add_argument(
-        "--full", action="store_true", help="Enable full mode with extended processing."
+        "--min_score",
+        type=float,
+        default=None,
+        help="Minimum raw score cutoff to include a word (unless it is approved). If not provided, all words (except rejected ones) are included.",
     )
     args = parser.parse_args()
     model_id = args.model
+    min_score_cutoff = args.min_score
 
-    # 3. Connect to DB & fetch scores for this model
+    # 2. Connect to DB & fetch scores for this model
     conn = sqlite3.connect(DATABASE_FILE)
     cur = conn.cursor()
 
-    if args.full:
+    if min_score_cutoff is None:
+        # Include all words (except rejected)
         cur.execute(
             """
             SELECT wms.word, wms.score, w.status
@@ -57,6 +62,7 @@ def main():
             (model_id,),
         )
     else:
+        # Include words that are either approved or have a score above the given cutoff
         cur.execute(
             """
             SELECT wms.word, wms.score, w.status
@@ -65,9 +71,9 @@ def main():
                 ON wms.word = w.word
             WHERE wms.model = ?
             AND w.status != 'rejected'
-            AND (w.status = 'approved' OR wms.score>0.3)
+            AND (w.status = 'approved' OR wms.score > ?)
             """,
-            (model_id,),
+            (model_id, min_score_cutoff),
         )
     results = cur.fetchall()
     conn.close()
@@ -76,7 +82,7 @@ def main():
         print(f"{c_yellow}No scores found for model {model_id}.{c_end}")
         return
 
-    # 4. Separate into (word, raw_score)
+    # 3. Separate into (word, raw_score)
     #    Sort primarily by score descending, secondarily by word ascending
 
     unchecked_words_and_scores = [
@@ -94,12 +100,12 @@ def main():
     word_closest_to_zero = min(words_and_scores, key=lambda x: abs(x[1]))
     closest_word, closest_score = word_closest_to_zero
 
-    # 5. Determine min & max raw scores
+    # 4. Determine min & max raw scores
     min_score = min(words_and_scores, key=lambda x: x[1])[1]
     max_score = max(words_and_scores, key=lambda x: x[1])[1]
     score_range = max_score - min_score
 
-    # 6. Normalize to [0..50]
+    # 5. Normalize to [0..50]
     normalized_dict = {}
     if score_range == 0:
         # If all scores are identical
@@ -116,7 +122,7 @@ def main():
     )
     print(f"{c_yellow}Number of Words: {len(words_and_scores)}{c_end}")
 
-    # 7. Write out the JSON dict of {word: normalized_score}
+    # 6. Write out the JSON dict of {word: normalized_score}
     #    in the sorted order (in Python >=3.7, dicts preserve insertion order)
     ordered_dict_for_json = {}
     for w, _ in words_and_scores:
@@ -125,10 +131,10 @@ def main():
     with open(SCORED_WORDLIST_JSON, "w", encoding="utf-8") as f:
         json.dump(ordered_dict_for_json, f, indent=4)
 
-    # 8. Write out the sorted list of words (descending by raw score, then alpha)
+    # 7. Write out the sorted list of words (descending by raw score, then alpha)
     sorted_word_list = [w for (w, _) in words_and_scores]
 
-    # 9. Write out a TXT file: "word;score" using the normalized score in the same order
+    # 8. Write out a TXT file: "word;score" using the normalized score in the same order
     with open(SCORED_WORDLIST_TXT, "w", encoding="utf-8") as f:
         for w in sorted_word_list:
             f.write(f"{w};{normalized_dict[w]}\n")
