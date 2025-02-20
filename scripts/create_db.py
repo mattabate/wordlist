@@ -26,9 +26,11 @@ def create_tables(cursor):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE CHECK(LENGTH(name) <= 200),
             source TEXT NOT NULL UNIQUE CHECK(LENGTH(source) <= 200),
-            file TEXT NOT NULL UNIQUE CHECK(LENGTH(file) <= 200)
+            file TEXT NOT NULL UNIQUE CHECK(LENGTH(file) <= 200),
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
-    """
+        """
     )
 
     cursor.execute(

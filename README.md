@@ -1,31 +1,32 @@
 
 # Wordlist for Puzzle Construction
 
-**[► Download Wordlist (JSON)](https://github.com/mattabate/wordlist/blob/main/data/matts_wordlist/scored_wordlist.json)**  
-**[► Download Wordlist (TXT)](https://github.com/mattabate/wordlist/blob/main/data/matts_wordlist/scored_wordlist.txt)**
+**[► Download Wordlist (JSON)](https://github.com/mattabate/wordlist/blob/main/matts_wordlist/scored_wordlist.json)**  
+**[► Download Wordlist (TXT)](https://github.com/mattabate/wordlist/blob/main/matts_wordlist/scored_wordlist.txt)**
 
-Welcome to the **Puzzle Constructor Wordlist** repository! This project provides a curated collection of words to power your crossword puzzles and other word-based games. In addition, you'll find scripts and tools to:
-
-- Score and filter words according to your own criteria.
-- Label and sort words manually (with real published crossword clues!).
-- Train custom AI/ML models based on your personal preferences.
-
-
-## What's in This Repo?
+Welcome to the **Puzzle Constructor Wordlist** repository! This project provides a curated collection of words to power your crossword puzzles and other word-based games. Here you'll find: 
 
 - A scored wordlist of ~260,000 words.
 - A tool for training your own AI/ML model to score words (using examples of words you like and dislike).
-- An interactive labeling tool to quickly curate your training data.
+
+A technical description and quickstart guide is provided below.  Email me with questions: mabate13@gmail.com.
+
 
 ## Table of Contents
 
-1. [Setup & Tools](#setup--tools)
+1. [Scoring Algorithm Descrition]()
+1. [Scripts & Tools](#setup--tools)
+1. [Quickstart](#setup--tools)
 2. [License & Credits](#license--credits)
 
+## 1. AI/ML Scoring Algorithm
 
 ## 1. Setup & Tools
 
+![Sorting Tool](wordlist/public/thing.svg)
+
 ### 1.1 Clone the Repository
+
 
 Clone the repo and change into the project directory:
 

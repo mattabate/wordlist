@@ -180,61 +180,65 @@ def update_clues_for_word(conn: sqlite3.Connection, word: str) -> None:
         return False
 
 
-def add_source(
+def add_or_update_source(
     conn: sqlite3.Connection, name: str, source_link: str, file_path: str
 ) -> int:
     """
-    Attempts to add a new source to the 'sources' table, returning the row's primary key in three cases:
-      1) If no row matches exactly (name, source, file), a new row is inserted and the new ID returned.
-      2) If an existing row already matches exactly (name, source, file), return that row's ID (no insert).
-      3) If there's a uniqueness conflict but not an exact match, raise an error.
+    Adds a new source or updates an existing one in the 'sources' table.
+    The sources table has UNIQUE constraints on name, source, and file.
+    In practice, the 'source' field is used as the unique identifier.
+
+    Workflow:
+      1) Check if a row exists with the given source_link.
+      2) If it exists, update last_updated to CURRENT_TIMESTAMP and return its id.
+      3) If it does not exist, insert a new row with the current time for both
+         created_at and last_updated.
 
     :param conn: Active sqlite3.Connection object
-    :param name:    The descriptive name of the source (<= 50 chars, unique)
+    :param name: The descriptive name of the source (<= 50 chars, unique)
     :param source_link: The link or identifier for the source (<= 50 chars, unique)
-    :param file_path:   The local file path for this source (<= 50 chars, unique)
-    :return: An int representing the ID of the row in 'sources'
-    :raises ValueError: If a uniqueness conflict is triggered (partial match).
+    :param file_path: The local file path for this source (<= 50 chars, unique)
+    :return: The row ID of the source in 'sources'
     """
-
-    # STEP 1: Check if an exact match already exists
     cursor = conn.cursor()
+
+    # Step 1: Check if a row exists with the same source_link
     cursor.execute(
         """
         SELECT id FROM sources
-        WHERE name = ?
-          AND source = ?
-          AND file = ?
+        WHERE source = ?
         """,
-        (name, source_link, file_path),
+        (source_link,),
     )
     row = cursor.fetchone()
-    if row:
-        # Scenario #3: Exact match found
-        existing_id = row[0]
-        print(f"Source already exists with ID={existing_id}. Returning existing ID.")
-        return existing_id
 
-    # STEP 2: Attempt insert for a brand-new source
-    try:
+    if row:
+        # Step 2: Update the last_updated field for the existing row
+        source_id = row[0]
         cursor.execute(
             """
-            INSERT INTO sources (name, source, file)
-            VALUES (?, ?, ?)
+            UPDATE sources
+            SET last_updated = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (source_id,),
+        )
+        conn.commit()
+        print(f"Updated last_updated for source ID {source_id}.")
+        return source_id
+    else:
+        # Step 3: Insert a new row with the current timestamps
+        cursor.execute(
+            """
+            INSERT INTO sources (name, source, file, created_at, last_updated)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """,
             (name, source_link, file_path),
         )
         new_id = cursor.lastrowid
         conn.commit()
-        # Scenario #1: Insert succeeded, so return the new source ID
+        print(f"Inserted new source with ID {new_id}.")
         return new_id
-
-    except sqlite3.IntegrityError as e:
-        # STEP 3: We know the row doesn't exactly match, because we checked above.
-        # So this must be a partial conflict -> Raise an error
-        raise ValueError(
-            "Uniqueness conflict: a row with one of these fields already exists, but does not match all fields."
-        ) from e
 
 
 def create_source_word(

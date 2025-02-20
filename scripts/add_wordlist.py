@@ -10,7 +10,7 @@ import yaml
 from dotenv import load_dotenv
 
 from wordlist.lib.database import (
-    add_source,
+    add_or_update_source,
     add_word,
     create_source_word,
     fetch_clues,
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     conn = sqlite3.connect(DATABASE_FILE)
 
     # Add source
-    source_id = add_source(
+    source_id = add_or_update_source(
         conn,
         name=name,
         source_link=url,
