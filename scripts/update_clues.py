@@ -9,16 +9,69 @@ Usage:
 import os
 import sqlite3
 import tqdm
+import importlib.util
 
 from dotenv import load_dotenv
 
 from wordlist.utils.printing import c_green, c_yellow, c_end
-from wordlist.lib.database import update_clues_for_word
 
 load_dotenv()
 
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 DB_PATH = os.getenv("SQLITE_DB_FILE")
+CLUES_SOURCE = os.getenv("CLUES_SOURCE", "wordlist/lib/clues.template.py")
+
+if CLUES_SOURCE == "wordlist/lib/clues.template.py" or not CLUES_SOURCE:
+    print(
+        c_yellow
+        + "Warning"
+        + c_end
+        + ": this script requires you to define a function for fetching clues. See https://github.com/mattabate/wordlist/blob/main/README.md for further details."
+    )
+    print(c_yellow + "Shutting down" + c_end)
+    exit()
+
+# Get the Fetch clues function from the clues source provided in your env
+module_name = os.path.splitext(os.path.basename(CLUES_SOURCE))[0]
+spec = importlib.util.spec_from_file_location(module_name, CLUES_SOURCE)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+fetch_clues = module.fetch_clues
+
+
+def update_clues_for_word(conn: sqlite3.Connection, word: str) -> None:
+    """
+    Given a word, fetch its clues from an external API (fetch_clues)
+    and, if successful, update both the 'clues' and 'clues_last_updated'
+    fields in the 'words' table.
+    """
+    c = fetch_clues(word)
+    if c is not None and c.strip():  # only update if clues is not empty
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE words
+            SET clues = ?,
+                clues_last_updated = datetime('now')
+            WHERE word = ?
+            """,
+            (c, word.upper()),
+        )
+        conn.commit()
+        return True
+    else:
+        # update date anyway
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE words
+            SET clues_last_updated = datetime('now')
+            WHERE word = ?
+            """,
+            (word.upper(),),
+        )
+        conn.commit()
+        return False
 
 
 def main():

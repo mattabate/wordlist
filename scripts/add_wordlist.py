@@ -6,6 +6,7 @@ import sqlite3
 import tqdm
 import sys
 import yaml
+import importlib.util
 
 from dotenv import load_dotenv
 
@@ -13,7 +14,6 @@ from wordlist.lib.database import (
     add_or_update_source,
     add_word,
     create_source_word,
-    fetch_clues,
     get_words,
 )
 from wordlist.utils.parsers import load_cc_txt_as_dict
@@ -23,6 +23,14 @@ load_dotenv()
 
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 DATABASE_FILE = os.getenv("SQLITE_DB_FILE")
+CLUES_SOURCE = os.getenv("CLUES_SOURCE", "wordlist/lib/clues.template.py")
+
+
+module_name = os.path.splitext(os.path.basename(CLUES_SOURCE))[0]
+spec = importlib.util.spec_from_file_location(module_name, CLUES_SOURCE)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+fetch_clues = module.fetch_clues
 
 if __name__ == "__main__":
 

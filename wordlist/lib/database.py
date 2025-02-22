@@ -1,10 +1,7 @@
 import os
-import random
-import requests
 import sqlite3
 import time
 
-from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from tqdm import tqdm
 
@@ -32,7 +29,7 @@ def get_clues_for_word(word: str, db_path: str = DATABASE_FILE) -> str:
         conn.close()
 
 
-def get_words_and_clues(conn, status=""):
+def get_words_and_clues(conn, status: str = ""):
     """
     Fetches words and their clues from the database filtered by status.
     If no status is provided, it fetches all words.
@@ -49,7 +46,7 @@ def get_words_and_clues(conn, status=""):
     return {answer: clues for answer, clues in rows}
 
 
-def get_words(conn, status=""):
+def get_words(conn, status: str = ""):
     """
     Fetches words and their clues from the database filtered by status.
     If no status is provided, it fetches all words.
@@ -98,86 +95,6 @@ def sort_words_by_score(
 
     # Sort the words by their scores
     return sorted(words, key=lambda w: scores.get(w, 0), reverse=order == "desc")
-
-
-_NUM_CLUES = 6
-
-
-# -----------------------------
-# Functions
-# -----------------------------
-def fetch_clues(word) -> str | None:
-    """
-    Fetch clues for a word from crosswordtracker.com.
-    If no clues are found, returns None.
-    """
-    url = f"https://crosswordtracker.com/answer/{word.lower()}/"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (compatible; CrosswordDBUpdater/1.0; +https://github.com/mattabate/wordlist)"
-    }
-    params = {}
-    try:
-        response = requests.get(url, headers=headers, params=params, timeout=10)
-        code = response.status_code
-    except Exception as e:
-        tqdm.write(
-            f"{c_red}Warning{c_end}: Exception occurred while fetching clues for {word}: {e}"
-        )
-        code = None
-
-    # If the request was unsuccessful, return None
-    if code != 200:
-        return None
-
-    # Otherwise, parse the HTML
-    time.sleep(random.uniform(0.15, 0.2))  # small delay to be nice to the server
-    soup = BeautifulSoup(response.text, "html.parser")
-    clue_header = soup.find("h3", string="Referring crossword puzzle clues")
-    if clue_header:
-        clue_container = clue_header.find_next_sibling("div")
-        if clue_container:
-            li_items = clue_container.find_all("li")
-            if li_items:
-                clues_text = "\n".join(
-                    [f"- {li.get_text(strip=True)}" for li in li_items[:_NUM_CLUES]]
-                )
-                return clues_text
-    return None
-
-
-def update_clues_for_word(conn: sqlite3.Connection, word: str) -> None:
-    """
-    Given a word, fetch its clues from an external API (fetch_clues)
-    and, if successful, update both the 'clues' and 'clues_last_updated'
-    fields in the 'words' table.
-    """
-    c = fetch_clues(word)
-    if c is not None and c.strip():  # only update if clues is not empty
-        cur = conn.cursor()
-        cur.execute(
-            """
-            UPDATE words
-            SET clues = ?,
-                clues_last_updated = datetime('now')
-            WHERE word = ?
-            """,
-            (c, word.upper()),
-        )
-        conn.commit()
-        return True
-    else:
-        # update date anyway
-        cur = conn.cursor()
-        cur.execute(
-            """
-            UPDATE words
-            SET clues_last_updated = datetime('now')
-            WHERE word = ?
-            """,
-            (word.upper(),),
-        )
-        conn.commit()
-        return False
 
 
 def add_or_update_source(

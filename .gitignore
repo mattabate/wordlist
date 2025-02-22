@@ -21,3 +21,5 @@ poetry.lock
 !/sources/_DIR_EXISTS/
 /models/*
 !/models/_DIR_EXISTS/
+
+/wordlist/lib/clues.py

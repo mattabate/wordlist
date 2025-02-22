@@ -42,6 +42,8 @@ In this quickstart guide, you'll train your own scoring model and create a score
 ![Project Overview](wordlist/public/project_overview.svg)
 *Figure 1: Project Overview*
 
+## setup.env
+
 ### 2.1 Clone and Install Dependencies
 
 
@@ -121,7 +123,7 @@ To import a scored wordlist (in Crossword Constructor TXT format), follow these 
 
 *Repeat these steps for each additional wordlist source you want to add. (See the Community Wordlists section for recommendations.)*
 
-### 2.5 Manually Sort Words
+### 2.4 Manually Sort Words
 
 Refine your wordlist by manually approving or rejecting words. This curated data is essential for training your model.
 
@@ -144,7 +146,7 @@ Refine your wordlist by manually approving or rejecting words. This curated data
   - **Google** the word for more context.
   - **Undo** a rejection if needed.
 
-### 2.6 Train the SVM Model
+### 2.5 Train the SVM Model
 
 Once you've sorted your words, train an SVM model using your approved and rejected words. This model will help score the words based on your preferences.
 
@@ -159,7 +161,7 @@ The script will:
 - Train an SVM model and display its score and training duration.
 - Prompt you to save the model as a pickle file in the `models/` directory (with metadata recorded in the database).
 
-### 2.7 Generate Scored Wordlist
+### 2.6 Generate Scored Wordlist
 
 After training your model, score the words in your database using:
 
@@ -169,7 +171,18 @@ poetry run python3 scripts/score_words.py --model <model_id>
 
 This command computes scores for your words based on the trained model and saves them to the database. Run this step once per model to generate the final wordlist (in Crossword Constructor format).
 
-## 2. License & Credits
+
+### 2.7 Additional Scripts
+
+```bash
+poetry run python3 scripts/wordlist_historgram.py --input <scores_json_path>
+```
+
+```bash
+poetry run python3 scripts/wordlist_historgram.py --input <scores_json_path>
+```
+
+## 3. License & Credits
 
 ### License
 
