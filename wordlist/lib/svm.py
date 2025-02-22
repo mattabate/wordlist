@@ -150,16 +150,16 @@ def train_model(
     train_start_time = time.time()
 
     param_grid = {
-        "kernel": ["linear", "rbf"],
-        "C": [1, 10, 15],
-        "gamma": [1, 5, 10],  # only used for 'rbf' kernel
+        "kernel": ["rbf"],
+        "C": [7.5, 12.5],
+        "gamma": [2.5, 7.5],  # only used for 'rbf' kernel
     }
     grid_search = GridSearchCV(
         SVC(tol=1e-5, max_iter=100000),  # Set lower tolerance and higher max iterations
         param_grid=param_grid,
         cv=5,
         scoring="accuracy",
-        verbose=3,
+        verbose=4,
         n_jobs=-1,
     )
 

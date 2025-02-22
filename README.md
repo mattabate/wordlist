@@ -1,31 +1,48 @@
 
 # Wordlist for Puzzle Construction
 
-**[► Download Wordlist (JSON)](https://github.com/mattabate/wordlist/blob/main/matts_wordlist/scored_wordlist.json)**  
 **[► Download Wordlist (TXT)](https://github.com/mattabate/wordlist/blob/main/matts_wordlist/scored_wordlist.txt)**
 
-Welcome to the **Puzzle Constructor Wordlist** repository! This project provides a curated collection of words to power your crossword puzzles and other word-based games. Here you'll find: 
+**[► Download Wordlist (JSON)](https://github.com/mattabate/wordlist/blob/main/matts_wordlist/scored_wordlist.json)**  
 
-- A scored wordlist of ~260,000 words.
-- A tool for training your own AI/ML model to score words (using examples of words you like and dislike).
+Welcome to my **Puzzle Constructor Wordlist** repository! This project provides a curated collection of words to aid you in creating crossword puzzles and other word-based games. Here you'll find: 
+
+- A free-to-use scored wordlist of ~260,000 words.
+- A pretrained AI/ML model that scores words (based on my preferences).  
+- A set of scrpts for training your own AI/ML model to score words (using examples of words you like and dislike).
 
 A technical description and quickstart guide is provided below.  Email me with questions: mabate13@gmail.com.
 
-
 ## Table of Contents
 
-1. [Scoring Algorithm Descrition]()
-1. [Scripts & Tools](#setup--tools)
-1. [Quickstart](#setup--tools)
-2. [License & Credits](#license--credits)
+1. [AI/ML Scoring Algorithm]()
+2. [Quickstart](#quickstart)
+3. [License & Credits](#license--credits)
 
 ## 1. AI/ML Scoring Algorithm
 
-## 1. Setup & Tools
+![Training Diagram](wordlist/public/training_diagram.svg)
+*Figure 1: Scoring Approach — Words and clues are vectorized using an embedding model, and an SVM is trained on labeled vectors to score new words in the future.*
 
-![Sorting Tool](wordlist/public/thing.svg)
+Given a new wordlist, the scoring method of this repo uses an embedding model to provide a 1536-dimensional vector for every word. A Support Vector Machine (SVM) is trained on labeled words, and this SVM then allows for scoring new words.
 
-### 1.1 Clone the Repository
+
+### Training a Model on my Preferences 
+After manual curation, an AI/ML model was trained to predict whether a new word would be acceptable. This is done in the following way:
+- A training and test set were formed from the 35K labeled words, where every word (e.g., `"HOUSE"`) was put into a longer prompt (e.g., `"ANSWER: HOUSE"`).
+- These prompts were then passed through an embedding model (transformer) to form a ≈1500 dimentional vector for each intial word. 
+- Finally, a Support Vector Machine (SVM) was trained on the output of the embedding model (`text-embedding-3-small`). This SVM is stored as a pickle file in the repo and facilitates the on the fly scoring of new words. 
+
+
+
+## 2. Quickstart
+
+In this quickstart guide, you'll train your own scoring model and create a scored wordlist.
+
+![Project Overview](wordlist/public/project_overview.svg)
+*Figure 1: Project Overview*
+
+### 2.1 Clone and Install Dependencies
 
 
 Clone the repo and change into the project directory:
@@ -35,8 +52,6 @@ git clone git@github.com:mattabate/wordlist.git
 cd wordlist
 ```
 
-### 1.2 Install Dependencies with Poetry
-
 Initialize and install all dependencies with:
 
 ```bash
@@ -44,7 +59,7 @@ poetry init
 poetry install
 ```
 
-### 1.3 Create the Database
+### 2.2 Create the Wordlist Database
 
 Set up the SQLite database by running:
 
@@ -58,7 +73,34 @@ This creates a `wordlist.db` file with key tables such as:
 - **sources** – records details about each word source.
 - **word_model_score** – logs scores from various models.
 
-### 1.4 Add a New Wordlist Source
+### 2.3 Add a New Wordlist Source
+
+To import words from a new wordlist (in Crossword Constructor TXT format) to your database, follow these steps:
+
+1. **Create a Folder**: In the `sources/` directory, create a folder for the wordlist you'd like to incorperate (e.g., `sources/matts_wordlist/`).
+2. **Add Files**:  
+   - Place your scored wordlist TXT file into this folder.
+   - Create a `config.yaml` with:
+     ```yaml
+     name: "matts_wordlist"
+     url: "https://github.com/mattswordlist/wordlist"
+     file_path: "sources/matts_wordlist/matts_wordlist.txt"
+     ```
+3. **Import to Database**:  
+   Run the following command to add the words (and their scores) to the database:
+   ```bash
+   poetry run python3 scripts/add_wordlist --input matts_wordlist
+   ```
+
+*Repeat these steps for each additional wordlist source you want to add.*
+
+> **Note:** As a starting example, I've provided my personal wordlist in the `quickstart/matts_wordlist.txt`. This can be used as a first example. For additional resources and wordlists, consider the following:
+> - [Chris's Jones Wordlist](https://github.com/christophsjones/crossword-wordlist)
+> - [Spread the Word(list)](https://www.spreadthewordlist.com/)
+> - [Peter Broda's Wordlist](https://peterbroda.me/crosswords/wordlist/)
+
+
+
 
 To import a scored wordlist (in Crossword Constructor TXT format), follow these steps:
 
@@ -79,7 +121,7 @@ To import a scored wordlist (in Crossword Constructor TXT format), follow these 
 
 *Repeat these steps for each additional wordlist source you want to add. (See the Community Wordlists section for recommendations.)*
 
-### 1.5 Manually Sort Words
+### 2.5 Manually Sort Words
 
 Refine your wordlist by manually approving or rejecting words. This curated data is essential for training your model.
 
@@ -102,7 +144,7 @@ Refine your wordlist by manually approving or rejecting words. This curated data
   - **Google** the word for more context.
   - **Undo** a rejection if needed.
 
-### 1.6 Train the SVM Model
+### 2.6 Train the SVM Model
 
 Once you've sorted your words, train an SVM model using your approved and rejected words. This model will help score the words based on your preferences.
 
@@ -117,7 +159,7 @@ The script will:
 - Train an SVM model and display its score and training duration.
 - Prompt you to save the model as a pickle file in the `models/` directory (with metadata recorded in the database).
 
-### 1.7 Generate Scored Wordlist
+### 2.7 Generate Scored Wordlist
 
 After training your model, score the words in your database using:
 

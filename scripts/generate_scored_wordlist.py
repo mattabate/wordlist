@@ -144,6 +144,7 @@ def main():
     conn = sqlite3.connect(DATABASE_FILE)
     approved_words = wordlist.lib.database.get_words(conn, status="approved")
     rejected_words = wordlist.lib.database.get_words(conn, status="rejected")
+    write_json("outputs/all_words.json", sorted_word_list)
     write_json("outputs/approved.json", approved_words)
     write_json("outputs/rejected.json", rejected_words)
 
