@@ -9,20 +9,20 @@ Welcome to my **Puzzle Constructor Wordlist** repository! This project provides 
 
 - A free-to-use scored wordlist of ~260,000 words.
 - A pretrained AI/ML model that scores words (based on my preferences).  
-- A set of scrpts for training your own AI/ML model to score words (using examples of words you like and dislike).
+- A set of scripts for training your own scoring model (using examples of words you like and dislike).
 
 A technical description and quickstart guide is provided below.  Email me with questions: mabate13@gmail.com.
 
 ## Table of Contents
 
-1. [AI/ML Scoring Algorithm]()
+1. [AI/ML Scoring Algorithm](#ai/ml-scoring-algorithm)
 2. [Quickstart](#quickstart)
 3. [License & Credits](#license--credits)
 
 ## 1. AI/ML Scoring Algorithm
 
 ![Training Diagram](wordlist/public/training_diagram.svg)
-*Figure 1: Scoring Approach — Words and clues are vectorized using an embedding model, and an SVM is trained on labeled vectors to score new words in the future.*
+*Figure 1: Scoring Approach — Words and clues are vectorized using an embedding model. An SVM is trained to seperate liked vectors from disliked vecotrs, and this SVM facilitates scoring words outside of the training set*
 
 Given a new wordlist, the scoring method of this repo uses an embedding model to provide a 1536-dimensional vector for every word. A Support Vector Machine (SVM) is trained on labeled words, and this SVM then allows for scoring new words.
 
@@ -60,6 +60,54 @@ Initialize and install all dependencies with:
 poetry init
 poetry install
 ```
+
+### 2.2 Set Up Environment  
+
+First, copy `.env.template` to `.env` and add your OpenAI API key:
+
+```bash
+cp .env.template .env
+```
+
+Then, open `.env` and update the following values:
+
+```ini
+SQLITE_DB_FILE=wordlist.db
+EMB_MODEL=text-embedding-3-small
+OPENAI_API_KEY=your-api-key-here
+CLUES_SOURCE=wordlist/lib/clues.template.py
+```
+
+By default, this project uses OpenAI’s `text-embedding-3-small` model. If you want to include clues in your database, you'll need to configure a clue source.  
+
+Right now, `wordlist/lib/clues.template.py` contains a placeholder function:  
+
+```python
+def fetch_clues(word: str) -> str | None:
+    """
+    Given a word, return a str containing one or more clues for that word.
+
+    Example:
+    fetch_clues("Cat") -> "- Mouse catcher\n- Word with house or hobie\n- Certain sailboat, for short"
+    """
+    return None
+```
+
+Since `fetch_clues` returns `None`, no clues will be added to your database or used in training unless you define your own function.  
+
+To add custom clues:  
+
+1. Copy `clues.template.py` to `clues.py`:  
+
+   ```bash
+   cp wordlist/lib/clues.template.py wordlist/lib/clues.py
+   ```
+
+2. Modify `clues.py` to implement your own `fetch_clues` function.  
+3. Update `CLUES_SOURCE` in `.env` to point to `wordlist/lib/clues.py`.  
+
+This lets you integrate custom clues into your training process.
+
 
 ### 2.2 Create the Wordlist Database
 
