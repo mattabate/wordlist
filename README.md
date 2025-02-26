@@ -7,33 +7,23 @@
 
 Welcome to my **Puzzle Constructor Wordlist** repository! This project provides a curated collection of words to aid you in creating crossword puzzles and other word-based games. Here you'll find: 
 
-- A free-to-use scored wordlist of ~260,000 words.
-- A pretrained AI/ML model that scores words (based on my preferences).  
+- A free-to-use scored wordlist of ~260,000 words.  
 - A set of scripts for training your own scoring model (using examples of words you like and dislike).
 
 A technical description and quickstart guide is provided below.  Email me with questions: mabate13@gmail.com.
 
 ## Table of Contents
 
-1. [AI/ML Scoring Algorithm](#ai/ml-scoring-algorithm)
-2. [Quickstart](#quickstart)
-3. [License & Credits](#license--credits)
+1. [AI/ML Scoring Algorithm](#1-aiml-scoring-algorithm)
+2. [Quickstart](#2-quickstart)
+3. [License & Credits](#3-license--credits)
 
 ## 1. AI/ML Scoring Algorithm
 
 ![Training Diagram](wordlist/public/training_diagram.svg)
-*Figure 1: Scoring Approach — Words and clues are vectorized using an embedding model. An SVM is trained to seperate liked vectors from disliked vecotrs, and this SVM facilitates scoring words outside of the training set*
+*Figure 1: Scoring Approach — Words and clues are converted to vectors using an embedding model. An SVM is trained to seperate liked words (vectors) from disliked words (vecotrs), and word scores are generated from this SVM.*
 
-Given a new wordlist, the scoring method of this repo uses an embedding model to provide a 1536-dimensional vector for every word. A Support Vector Machine (SVM) is trained on labeled words, and this SVM then allows for scoring new words.
-
-
-### Training a Model on my Preferences 
-After manual curation, an AI/ML model was trained to predict whether a new word would be acceptable. This is done in the following way:
-- A training and test set were formed from the 35K labeled words, where every word (e.g., `"HOUSE"`) was put into a longer prompt (e.g., `"ANSWER: HOUSE"`).
-- These prompts were then passed through an embedding model (transformer) to form a ≈1500 dimentional vector for each intial word. 
-- Finally, a Support Vector Machine (SVM) was trained on the output of the embedding model (`text-embedding-3-small`). This SVM is stored as a pickle file in the repo and facilitates the on the fly scoring of new words. 
-
-
+For [my own wordlist](https://github.com/mattabate/wordlist/blob/main/matts_wordlist/scored_wordlist.txt), I started with over 600,000 words, collected from [3 major free-to-use wordlists](#credits). I manually labeled 35,000 words as `approved` or `disliked`, of which 21,000 were used to train the SVM. The final wordlist of 260,000 words was selected by distilling the intiial 600,000 to the words that were either top scoring or had previously been approved.  
 
 ## 2. Quickstart
 
@@ -41,8 +31,6 @@ In this quickstart guide, you'll train your own scoring model and create a score
 
 ![Project Overview](wordlist/public/project_overview.svg)
 *Figure 1: Project Overview*
-
-## setup.env
 
 ### 2.1 Clone and Install Dependencies
 
@@ -109,7 +97,7 @@ To add custom clues:
 This lets you integrate custom clues into your training process.
 
 
-### 2.2 Create the Wordlist Database
+### 2.3 Create the Wordlist Database
 
 Set up the SQLite database by running:
 
@@ -123,7 +111,8 @@ This creates a `wordlist.db` file with key tables such as:
 - **sources** – records details about each word source.
 - **word_model_score** – logs scores from various models.
 
-### 2.3 Add a New Wordlist Source
+### 2.4 Add a New Wordlist Source
+
 
 To import words from a new wordlist (in Crossword Constructor TXT format) to your database, follow these steps:
 
@@ -144,7 +133,7 @@ To import words from a new wordlist (in Crossword Constructor TXT format) to you
 
 *Repeat these steps for each additional wordlist source you want to add.*
 
-> **Note:** As a starting example, I've provided my personal wordlist in the `quickstart/matts_wordlist.txt`. This can be used as a first example. For additional resources and wordlists, consider the following:
+> **Note:** As a starting example, I've provided my personal wordlist in the `quickstart/matts_wordlist.txt`. For additional resources and wordlists, consider the following:
 > - [Chris's Jones Wordlist](https://github.com/christophsjones/crossword-wordlist)
 > - [Spread the Word(list)](https://www.spreadthewordlist.com/)
 > - [Peter Broda's Wordlist](https://peterbroda.me/crosswords/wordlist/)
@@ -171,7 +160,7 @@ To import a scored wordlist (in Crossword Constructor TXT format), follow these 
 
 *Repeat these steps for each additional wordlist source you want to add. (See the Community Wordlists section for recommendations.)*
 
-### 2.4 Manually Sort Words
+### 2.5 Manually Sort Words
 
 Refine your wordlist by manually approving or rejecting words. This curated data is essential for training your model.
 
@@ -194,7 +183,7 @@ Refine your wordlist by manually approving or rejecting words. This curated data
   - **Google** the word for more context.
   - **Undo** a rejection if needed.
 
-### 2.5 Train the SVM Model
+### 2.6 Train the SVM Model
 
 Once you've sorted your words, train an SVM model using your approved and rejected words. This model will help score the words based on your preferences.
 
@@ -209,7 +198,7 @@ The script will:
 - Train an SVM model and display its score and training duration.
 - Prompt you to save the model as a pickle file in the `models/` directory (with metadata recorded in the database).
 
-### 2.6 Generate Scored Wordlist
+### 2.7 Generate Scored Wordlist
 
 After training your model, score the words in your database using:
 
@@ -220,12 +209,14 @@ poetry run python3 scripts/score_words.py --model <model_id>
 This command computes scores for your words based on the trained model and saves them to the database. Run this step once per model to generate the final wordlist (in Crossword Constructor format).
 
 
-### 2.7 Additional Scripts
+### 2.8 Additional Scripts
 
+For every word in the database without clues, try to find clues:
 ```bash
-poetry run python3 scripts/wordlist_historgram.py --input <scores_json_path>
+poetry run python3 scripts/update_clues.py
 ```
 
+Make a histogram showing the distribution of scores in my wordlist
 ```bash
 poetry run python3 scripts/wordlist_historgram.py --input <scores_json_path>
 ```
@@ -247,11 +238,9 @@ This project is distributed under a [Creative Commons Attribution-NonCommercial-
 
 ### Credits
 
-- **Community Wordlists**:  
-  This project builds upon numerous community wordlists, including:
+- **Community Wordlists**:  My personal wordlist borrows words from numberous excelent community wordlists, including:
   - [Chris's Jones Wordlist](https://github.com/christophsjones/crossword-wordlist)
   - [Spread the Word(list)](https://www.spreadthewordlist.com/)
   - [Peter Broda's Wordlist](https://peterbroda.me/crosswords/wordlist/)
 
-- **Contributors**:  
-  Thank you to everyone who has contributed suggestions, code, and feedback—your efforts help make this project even better!
+- **Contributors**:    Thank you to everyone who has contributed suggestions, code, and feedback.

@@ -1,20 +1,23 @@
+import json
 import os
 import pickle
-import random
 import time
 import tqdm
+import yaml
 
 from dotenv import load_dotenv
 from openai import OpenAI
 from typing import List, Tuple
 
 from sklearn.svm import SVC
+from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 from wordlist.lib.database import get_clues_for_word
-
-# must import embedding
+from wordlist.utils.printing import c_blue, c_end
 
 # ------------------------------------------------------------------------------
 #  Initialization / Config
@@ -26,6 +29,33 @@ EMB_MODL = os.getenv("EMB_MODL")
 
 # Create OpenAI client (adjust as needed)
 client = OpenAI()
+
+with open("search_config.yml", "r") as file:
+    config = yaml.safe_load(file)
+
+tt_split = config["ratio_test"]  # 0.2 means 20% test set
+tolerance = config["tolerance"]
+max_iter = config["max_iter"]
+
+SEARCH_PARAM = {
+    "svm__kernel": config["svm_parameters"]["kernel"],
+    "svm__degree": config["svm_parameters"][
+        "degree"
+    ],  # Including degree 5 for more nonlinearity
+    "svm__gamma": config["svm_parameters"]["gamma"],
+    "svm__coef0": config["svm_parameters"]["coef0"],  # Independent term
+    "svm__C": config["svm_parameters"][
+        "C"
+    ],  # Regularization parameter; higher C allows more overfitting
+}
+_cv = config["num_folds"]
+
+pipeline = Pipeline(
+    [
+        ("scaler", StandardScaler()),
+        ("svm", SVC(tol=tolerance, max_iter=max_iter)),
+    ]
+)
 
 
 # ------------------------------------------------------------------------------
@@ -149,17 +179,14 @@ def train_model(
     print("\nStarting SVM Grid Search (this may take a while)...")
     train_start_time = time.time()
 
-    param_grid = {
-        "C": [0.1, 1, 10, 100],
-        "gamma": [0.001, 0.01, 0.1, 1],
-    }
+    # Use the pipeline defined earlier (with StandardScaler and SVC)
     grid_search = GridSearchCV(
-        SVC(tol=1e-4, max_iter=10000),  # Set lower tolerance and higher max iterations
-        param_grid=param_grid,
-        cv=5,
+        pipeline,
+        param_grid=SEARCH_PARAM,
+        cv=_cv,
         scoring="accuracy",
         verbose=4,
-        n_jobs=-1,
+        n_jobs=1,
     )
 
     grid_search.fit(X_train_vectors, y_train)
@@ -176,9 +203,8 @@ def train_model(
     best_clf = grid_search.best_estimator_
 
     log_output = {
-        "param_grid": param_grid,
         "best_parameters": grid_search.best_params_,
-        "duration": int(elapsed_time),
+        "search_time_seconds": int(elapsed_time),
     }
     return best_clf, log_output
 
@@ -202,7 +228,7 @@ def evaluate_model(
 #  5) Master Train Function
 # ------------------------------------------------------------------------------
 def train_svm(
-    approved_words_dict: List[str], not_approved_words_dict: List[str]
+    set_1_words_clues: dict[str, str], set_2_words_clues: dict[str, str]
 ) -> tuple[SVC, dict]:
     """
     Master function that:
@@ -215,44 +241,49 @@ def train_svm(
 
     _train_limit = 10000000
 
-    not_approved_words = [word for word in not_approved_words_dict]
-    approved_words = [word for word in approved_words_dict]
-    random.shuffle(not_approved_words)
-    random.shuffle(approved_words)
-
-    not_approved_words = not_approved_words[
-        : min(_train_limit, len(not_approved_words_dict))
+    set_1_words: list[str] = list(set_1_words_clues.keys())
+    set_2_words: list[str] = list(set_2_words_clues.keys())
+    set_1_words = set_1_words[
+        : min(_train_limit, len(set_1_words_clues), len(set_2_words_clues))
     ]
-    approved_words = approved_words[: min(_train_limit, len(approved_words_dict))]
+    set_2_words = set_2_words[
+        : min(_train_limit, len(set_1_words_clues), len(set_2_words_clues))
+    ]
 
     # -- 1) Split
     X_train_words, X_test_words, y_train, y_test = make_train_test_split(
-        approved_words, not_approved_words
+        set_1_words, set_2_words, test_size=tt_split
     )
 
     train_dict = {}
     for word in X_train_words:
-        if word in approved_words_dict:
-            train_dict[word] = approved_words_dict[word]
+        if word in set_1_words_clues:
+            train_dict[word] = set_1_words_clues[word]
         else:
-            train_dict[word] = not_approved_words_dict[word]
-
-    test_dict = {}
-    for word in X_test_words:
-        if word in approved_words_dict:
-            test_dict[word] = approved_words_dict[word]
-        else:
-            test_dict[word] = not_approved_words_dict[word]
+            train_dict[word] = set_2_words_clues[word]
 
     # -- 2) Embed training and test sets
     print("Embedding train set...")
     X_train_vectors = embed_in_chunks(train_dict)
-    print("Embedding test set...")
-    X_test_vectors = embed_in_chunks(test_dict)
+
+    test_dict = {}
+    for word in X_test_words:
+        if word in set_1_words_clues:
+            test_dict[word] = set_1_words_clues[word]
+        else:
+            test_dict[word] = set_2_words_clues[word]
 
     # -- 3) Train (grid search)
+    tqdm.tqdm.write(c_blue + "Search Config:" + c_end)
+    tqdm.tqdm.write(json.dumps(config, indent=2))
+
     best_clf, log_output = train_model(X_train_vectors, y_train)
+
+    print("Embedding test set...")
+    X_test_vectors = embed_in_chunks(test_dict)
     score = evaluate_model(best_clf, X_test_vectors, y_test)
 
-    log_output["score"] = score
-    return best_clf, log_output
+    config["best_parameters"] = log_output["best_parameters"]
+    config["search_time_seconds"] = log_output["search_time_seconds"]
+    config["test_score"] = score
+    return best_clf, config

@@ -46,9 +46,9 @@ if __name__ == "__main__":
     conn = sqlite3.connect(DATABASE_FILE)
     success = True
     try:
-        score = log_output["score"]
+        score = log_output["test_score"]
         pkl_file_name = add_model(
-            conn, score, date, log_output["duration"], json.dumps(log_output)
+            conn, score, date, log_output["search_time_seconds"], json.dumps(log_output)
         )
     except Exception as e:
         print(f"{c_red}Error:{c_end} {e}")
