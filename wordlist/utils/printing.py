@@ -1,0 +1,6 @@
+c_pink = "\033[95m"
+c_blue = "\033[94m"
+c_green = "\033[92m"
+c_yellow = "\033[93m"
+c_red = "\033[91m"
+c_end = "\033[0m"
