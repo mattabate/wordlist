@@ -34,7 +34,6 @@ In this quickstart guide, you'll train your own scoring model and create a score
 
 ### 2.1 Clone and Install Dependencies
 
-
 Clone the repo and change into the project directory:
 
 ```bash
@@ -67,6 +66,14 @@ CLUES_SOURCE=wordlist/lib/clues.template.py
 ```
 
 By default, this project uses OpenAI’s `text-embedding-3-small` model. If you want to include clues in your database, you'll need to configure a clue source.  
+
+Next, copy `search_config.template.yml` to `search_config.yml`. 
+
+```bash
+cp search_config.template.yml search_config.yml
+```
+ > If you're interested in learning what the parameters in this file corespond to, and how to edit them to get a better scoring algorithm, ask ChatGPT - with the file and nothing else, it give's a pretty good desctiption.
+
 
 Right now, `wordlist/lib/clues.template.py` contains a placeholder function:  
 

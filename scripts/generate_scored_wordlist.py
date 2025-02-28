@@ -86,11 +86,11 @@ def main():
     #    Sort primarily by score descending, secondarily by word ascending
 
     unchecked_words_and_scores = [
-        (row[0], min(float(row[1]), 1.0)) for row in results if row[2] == "unchecked"
+        (row[0], min(float(row[1]), 2)) for row in results if row[2] == "unchecked"
     ]
     min_score_unchecked = min([x for _, x in unchecked_words_and_scores], default=0)
     approved_words_and_scores = [
-        (row[0], min(max(float(row[1]), min_score_unchecked), 1))
+        (row[0], min(max(float(row[1]), min_score_unchecked), 2))
         for row in results
         if row[2] == "approved"
     ]
