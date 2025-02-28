@@ -1,16 +1,14 @@
 
 # Wordlist for Puzzle Construction
 
-**[► Download Wordlist (TXT)](https://github.com/mattabate/wordlist/blob/main/matts_wordlist/scored_wordlist.txt)**
-
-**[► Download Wordlist (JSON)](https://github.com/mattabate/wordlist/blob/main/matts_wordlist/scored_wordlist.json)**  
+**[► Download Wordlist (TXT)](https://github.com/mattabate/wordlist/blob/main/quickstart/matts_wordlist.txt)**
 
 Welcome to my **Puzzle Constructor Wordlist** repository! This project provides a curated collection of words to aid you in creating crossword puzzles and other word-based games. Here you'll find: 
 
-- A free-to-use scored wordlist of ~260,000 words.  
-- A set of scripts for training your own scoring model (using examples of words you like and dislike).
+- a free-to-use scored wordlist of [~260,000 words](https://github.com/mattabate/wordlist/blob/main/quickstart/matts_wordlist.txt), and
+- a set of scripts for training your own AI scoring model (using examples of words you like and dislike).
 
-A technical description and quickstart guide is provided below.  Email me with questions: mabate13@gmail.com.
+A technical description and quickstart guide are provided below.  Email me with questions: mabate13@gmail.com.
 
 ## Table of Contents
 
@@ -21,7 +19,7 @@ A technical description and quickstart guide is provided below.  Email me with q
 ## 1. AI/ML Scoring Algorithm
 
 ![Training Diagram](wordlist/public/training_diagram.svg)
-*Figure 1: Scoring Approach — Words and clues are converted to vectors using an embedding model. An SVM is trained to seperate liked words (vectors) from disliked words (vecotrs), and word scores are generated from this SVM.*
+*Figure 1: Scoring Approach — Words and clues are converted to vectors using an embedding model. An SVM is trained to seperate liked words (vectors) from disliked words (vecotrs), and final word scores are generated from this SVM.*
 
 For [my own wordlist](https://github.com/mattabate/wordlist/blob/main/matts_wordlist/scored_wordlist.txt), I started with over 600,000 words, collected from [3 major free-to-use wordlists](#credits). I manually labeled 35,000 words as `approved` or `disliked`, of which 21,000 were used to train the SVM. The final wordlist of 260,000 words was selected by distilling the intiial 600,000 to the words that were either top scoring or had previously been approved.  
 
@@ -34,14 +32,14 @@ In this quickstart guide, you'll train your own scoring model and create a score
 
 ### 2.1 Clone and Install Dependencies
 
-Clone the repo and change into the project directory:
+Clone the repo and enter the project directory:
 
 ```bash
 git clone git@github.com:mattabate/wordlist.git
 cd wordlist
 ```
 
-Initialize and install all dependencies with:
+Initialize and install project dependencies with:
 
 ```bash
 poetry init
@@ -50,24 +48,24 @@ poetry install
 
 ### 2.2 Set Up Environment  
 
-First, copy `.env.template` to `.env` and add your OpenAI API key:
+First, copy `.env.template` to `.env`
 
 ```bash
 cp .env.template .env
 ```
 
-Then, open `.env` and update the following values:
+For now, you only need to add your OpenAI API key
 
 ```ini
 SQLITE_DB_FILE=wordlist.db
 EMB_MODEL=text-embedding-3-small
-OPENAI_API_KEY=your-api-key-here
 CLUES_SOURCE=wordlist/lib/clues.template.py
+OPENAI_API_KEY=your-api-key-here
 ```
 
-By default, this project uses OpenAI’s `text-embedding-3-small` model. If you want to include clues in your database, you'll need to configure a clue source.  
+> _Note: By default, this project uses OpenAI’s `text-embedding-3-small` model._
 
-Next, copy `search_config.template.yml` to `search_config.yml`. 
+Next, in the root directory, copy `search_config.template.yml` to `search_config.yml`.
 
 ```bash
 cp search_config.template.yml search_config.yml
@@ -75,7 +73,7 @@ cp search_config.template.yml search_config.yml
  > If you're interested in learning what the parameters in this file corespond to, and how to edit them to get a better scoring algorithm, ask ChatGPT - with the file and nothing else, it give's a pretty good desctiption.
 
 
-Right now, `wordlist/lib/clues.template.py` contains a placeholder function:  
+Finally, if you want to include clues in your database, you'll need to configure a clue source.  Right now, `wordlist/lib/clues.template.py` contains a placeholder function:  
 
 ```python
 def fetch_clues(word: str) -> str | None:
@@ -102,7 +100,6 @@ To add custom clues:
 3. Update `CLUES_SOURCE` in `.env` to point to `wordlist/lib/clues.py`.  
 
 This lets you integrate custom clues into your training process.
-
 
 ### 2.3 Create the Wordlist Database
 
@@ -145,28 +142,6 @@ To import words from a new wordlist (in Crossword Constructor TXT format) to you
 > - [Spread the Word(list)](https://www.spreadthewordlist.com/)
 > - [Peter Broda's Wordlist](https://peterbroda.me/crosswords/wordlist/)
 
-
-
-
-To import a scored wordlist (in Crossword Constructor TXT format), follow these steps:
-
-1. **Create a Folder**: In the `sources/` directory, create a folder for your wordlist (e.g., `sources/matts_wordlist/`).
-2. **Add Files**:  
-   - Place your scored wordlist TXT file into this folder.
-   - Create a `config.yaml` with content like:
-     ```yaml
-     name: "matts_wordlist"
-     url: "https://github.com/mattswordlist/wordlist"
-     file_path: "sources/matts_wordlist/matts_wordlist.txt"
-     ```
-3. **Import to Database**:  
-   Run the following command to add the words (and their scores) to the database:
-   ```bash
-   poetry run python3 scripts/add_wordlist --input matts_wordlist
-   ```
-
-*Repeat these steps for each additional wordlist source you want to add. (See the Community Wordlists section for recommendations.)*
-
 ### 2.5 Manually Sort Words
 
 Refine your wordlist by manually approving or rejecting words. This curated data is essential for training your model.
@@ -174,7 +149,16 @@ Refine your wordlist by manually approving or rejecting words. This curated data
 ![Sorting Tool](wordlist/public/api_sort.png)
 
 - **Input File**:  
-  The tool uses `inputs/manually_sort_words.json` for its word queue. If the file or `inputs/` directory doesn’t exist, it will be created automatically on the first run.
+  The tool uses `inputs/manually_sort_words.json` for its word queue. If the file or `inputs/` directory doesn’t exist, it will be created automatically on the first run. The file should contain a json list 
+  
+  ```
+  [
+      "MATT", 
+      "MATTE", 
+      "MATTRESSPADS", 
+      ...
+  ]
+  ```
   
 - **Run the Tool**:  
   Launch the sorting interface with:
