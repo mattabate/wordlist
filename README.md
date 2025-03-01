@@ -21,7 +21,7 @@ A technical description and quickstart guide are provided below.  Email me with 
 ![Training Diagram](wordlist/public/training_diagram.svg)
 *Figure 1: Scoring Approach — Words and clues are converted to vectors using an embedding model. An SVM is trained to seperate liked words (vectors) from disliked words (vecotrs), and final word scores are generated from this SVM.*
 
-For [my wordlist](https://raw.githubusercontent.com/mattabate/wordlist/refs/heads/main/quickstart/matts_wordlist.txt), I started with over 600,000 words, collected from [3 major free-to-use wordlists](#credits). I manually labeled 35,000 words as `approved` or `disliked`, of which 21,000 were used to train the SVM. The final wordlist of 260,000 words was selected by distilling the intiial 600,000 to the words that were either top scoring or had previously been approved.  
+For [my wordlist](https://raw.githubusercontent.com/mattabate/wordlist/refs/heads/main/quickstart/matts_wordlist.txt), I started with ~600,000 words, collected from [3 major free-to-use wordlists](#credits). I manually labeled ~41,000 words as `approved` or `disliked`.  Then I used ~26,000 to train the SVM. The final wordlist of 260,000 words was selected by distilling the intiial 600,000 to the words that were either top scoring or had previously been approved.  
 
 ## 2. Quickstart
 
