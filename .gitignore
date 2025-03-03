@@ -24,3 +24,4 @@ poetry.lock
 
 /wordlist/lib/clues.py
 search_config.yml
+/tmp
