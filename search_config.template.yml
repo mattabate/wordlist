@@ -1,0 +1,12 @@
+ratio_test: 0.2
+num_folds: 5
+
+tolerance: 0.000001
+max_iter: 10000
+
+svm_parameters:
+  kernel: ["poly"]
+  degree: [2, 3, 4, 5]
+  gamma: [0.0001, 0.001, 0.01, 0.1, 1]
+  coef0: [0, 1]
+  C: [0.001, 0.01, 0.1,1]

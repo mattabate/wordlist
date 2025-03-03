@@ -1,0 +1,27 @@
+# Python-specific ignores
+__pycache__/
+*.pyc
+pyproject.toml
+
+# Environment files
+.env
+
+# Poetry files
+poetry.lock
+
+# *.db
+*db
+*.db-journal
+
+/inputs/*
+!/inputs/_DIR_EXISTS/
+/outputs/*
+!/outputs/_DIR_EXISTS/
+/sources/*
+!/sources/_DIR_EXISTS/
+/models/*
+!/models/_DIR_EXISTS/
+
+/wordlist/lib/clues.py
+search_config.yml
+/tmp
