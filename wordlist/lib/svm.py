@@ -284,6 +284,7 @@ def train_svm(
     score = evaluate_model(best_clf, X_test_vectors, y_test)
 
     config["best_parameters"] = log_output["best_parameters"]
+    config["tt_split"] = tt_split
     config["search_time_seconds"] = log_output["search_time_seconds"]
     config["test_score"] = score
     return best_clf, config
