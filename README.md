@@ -5,7 +5,7 @@
 
 Welcome to my **Puzzle Constructor Wordlist** repository! This project provides a curated collection of words to aid you in creating crossword puzzles and other word-based games. Here you'll find: 
 
-- a free-to-use scored wordlist of [~260,000 words](https://raw.githubusercontent.com/mattabate/wordlist/refs/heads/main/quickstart/matts_wordlist.txt), where the word scores were generated using an [AI / ML model](#1-aiml-scoring-algorithm), and
+- a free-to-use scored wordlist of [~413,000 words](https://raw.githubusercontent.com/mattabate/wordlist/refs/heads/main/quickstart/matts_wordlist.txt), where the word scores were generated using an [AI / ML model](#1-aiml-scoring-algorithm), and
 - a set of scripts for training your own AI scoring model (using examples of words you like and dislike).
 
 A technical description and quickstart guide are provided below.  Email me with questions: mabate13@gmail.com.
@@ -21,7 +21,8 @@ A technical description and quickstart guide are provided below.  Email me with 
 ![Training Diagram](wordlist/public/training_diagram.svg)
 *Figure 1: Scoring Approach — Words and clues are converted to vectors using an embedding model. An SVM is trained to seperate liked words (vectors) from disliked words (vecotrs), and final word scores are generated from this SVM.*
 
-For [my wordlist](https://raw.githubusercontent.com/mattabate/wordlist/refs/heads/main/quickstart/matts_wordlist.txt), I started with ~600,000 words, collected from [3 major free-to-use wordlists](#credits). I manually labeled ~42,000 words  (`approved` or `disliked`) to train the SVM. The final wordlist of 260,000 words was selected by distilling the intiial 600,000 to the words that were either top scoring or had previously been approved.  
+For [my wordlist](https://raw.githubusercontent.com/mattabate/wordlist/refs/heads/main/quickstart/matts_wordlist.txt), I started with ~600,000 words, collected from [3 major free-to-use wordlists](#credits). 
+I manually labeled ~42,000 words  (`approved` or `disliked`) to train the SVM. The final wordlist of ~413,000 words was selected by distilling the intiial 600,000 to the words that were either top scoring or had previously been approved.  
 
 ## 2. Quickstart
 
