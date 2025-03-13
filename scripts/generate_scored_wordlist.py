@@ -88,16 +88,42 @@ def main():
     unchecked_words_and_scores = [
         (row[0], min(float(row[1]), 2)) for row in results if row[2] == "unchecked"
     ]
-    min_score_unchecked = min([x for _, x in unchecked_words_and_scores], default=0)
+    unchecked_words_and_scores.sort(key=lambda x: (-x[1], x[0]))
+    num_unchecked_words = len(unchecked_words_and_scores)
+    unchecked_words_and_scores = [
+        (c[0], 50 - round(50 * (i / num_unchecked_words)))
+        for i, c in enumerate(unchecked_words_and_scores)
+    ]
+    unchecked_words_and_scores.sort(key=lambda x: (-x[1], x[0]))
+    print("top 5 unchecked words", unchecked_words_and_scores[:10])
+    print("bottom 5 unchecked words", unchecked_words_and_scores[-10:])
+
     approved_words_and_scores = [
-        (row[0], min(max(float(row[1]), min_score_unchecked), 2))
+        (row[0], min(max(float(row[1]), 0), 2))
         for row in results
         if row[2] == "approved"
     ]
+    approved_words_and_scores.sort(key=lambda x: (-x[1], x[0]))
+    # scale from 25 - 50
+    num_approved_words = len(approved_words_and_scores)
+    approved_words_and_scores = [
+        (c[0], 50 - round(25 * (i / num_approved_words)))
+        for i, c in enumerate(approved_words_and_scores)
+    ]
+    approved_words_and_scores.sort(key=lambda x: (-x[1], x[0]))
 
+    print()
+    print("top 5 approved words", approved_words_and_scores[:5])
+    print("bottom 5 approved words", approved_words_and_scores[-5:])
+    # scale from 25 - 50
+
+    # remove all unchecked words with score < 0
     words_and_scores = unchecked_words_and_scores + approved_words_and_scores
     words_and_scores.sort(key=lambda x: (-x[1], x[0]))
-    word_closest_to_zero = min(words_and_scores, key=lambda x: abs(x[1]))
+    print()
+    print("top 5 words", words_and_scores[:5])
+
+    word_closest_to_zero = min(words_and_scores, key=lambda x: abs(25 - x[1]))
     closest_word, closest_score = word_closest_to_zero
 
     # 4. Determine min & max raw scores
@@ -106,27 +132,23 @@ def main():
     score_range = max_score - min_score
 
     # 5. Normalize to [0..50]
-    normalized_dict = {}
+    ordered_dict_for_json = {}
     if score_range == 0:
         # If all scores are identical
         print(f"{c_red}All scores are identical. Normalizing to 25 by default.{c_end}")
         for w, s in words_and_scores:
-            normalized_dict[w] = 25
+            ordered_dict_for_json[w] = 25
     else:
         for w, s in words_and_scores:
-            normalized_value = (s - min_score) / score_range * 50
-            normalized_dict[w] = int(normalized_value)
+            ordered_dict_for_json[w] = s
 
     print(
-        f"{c_yellow}Word with closest model score to zero: {closest_word} ({closest_score:.2f}){c_end}. New score: {normalized_dict[closest_word]}."
+        f"{c_yellow}Word with closest model score to zero: {closest_word} ({closest_score:.2f}){c_end}. New score: {ordered_dict_for_json[closest_word]}."
     )
     print(f"{c_yellow}Number of Words: {len(words_and_scores)}{c_end}")
 
     # 6. Write out the JSON dict of {word: normalized_score}
     #    in the sorted order (in Python >=3.7, dicts preserve insertion order)
-    ordered_dict_for_json = {}
-    for w, _ in words_and_scores:
-        ordered_dict_for_json[w] = normalized_dict[w]
 
     with open(SCORED_WORDLIST_JSON, "w", encoding="utf-8") as f:
         json.dump(ordered_dict_for_json, f, indent=4)
@@ -137,7 +159,7 @@ def main():
     # 8. Write out a TXT file: "word;score" using the normalized score in the same order
     with open(SCORED_WORDLIST_TXT, "w", encoding="utf-8") as f:
         for w in sorted_word_list:
-            f.write(f"{w};{normalized_dict[w]}\n")
+            f.write(f"{w};{ordered_dict_for_json[w]}\n")
 
     print(f"{c_green}Done!{c_end} Generated scored wordlist for model {model_id}.")
 

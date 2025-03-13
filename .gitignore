@@ -21,6 +21,8 @@ poetry.lock
 !/sources/_DIR_EXISTS/
 /models/*
 !/models/_DIR_EXISTS/
+quickstart/*
+!quickstart/matts_wordlist.txt
 
 /wordlist/lib/clues.py
 search_config.yml
