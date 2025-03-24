@@ -64,8 +64,8 @@ def get_words(conn, status: str = ""):
 
 
 def sort_words_by_score(
-    conn: sqlite3.Connection, words: list[str], model_id: int, order: str = "desc"
-) -> list[str]:
+    conn: sqlite3.Connection, words: list[str], model_id: int
+) -> dict[str, float]:
     """
     Sorts a list of words by their scores for a given model ID.
     The scores are fetched from the 'word_model_score' table in the database.
@@ -94,7 +94,7 @@ def sort_words_by_score(
     scores = dict(cur.fetchall())
 
     # Sort the words by their scores
-    return sorted(words, key=lambda w: scores.get(w, 0), reverse=order == "desc")
+    return scores
 
 
 def add_or_update_source(
@@ -390,9 +390,14 @@ def update_word_status(conn: sqlite3.Connection, word: str, new_status: str) -> 
                 (new_status, word_upper),
             )
             conn.commit()
-            tqdm.write(
-                f"{c_green}Success:{c_end} Updated status of '{word_upper}' from '{current_status}' to '{new_status}'."
-            )
+            if new_status == "approved":
+                tqdm.write(
+                    f"{c_green}Success:{c_end} Updated status of '{word_upper}' from '{current_status}' to {c_green}'{new_status}'{c_end}."
+                )
+            else:
+                tqdm.write(
+                    f"{c_yellow}Notice:{c_end} Updated status of '{word_upper}' from '{current_status}' to {c_yellow}'{new_status}'{c_end}."
+                )
             return True
         else:
             tqdm.write(

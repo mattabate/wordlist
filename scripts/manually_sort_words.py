@@ -131,7 +131,7 @@ class WordCard(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         self.setLayout(layout)
 
-    def load_word(self, word):
+    def load_word(self, word, score):
         """
         Loads a new word into the card. If no word is provided, disable controls.
         """
@@ -144,7 +144,7 @@ class WordCard(QWidget):
             self.pass_button.setEnabled(False)
             self.google_button.setEnabled(False)
         else:
-            self.word_label.setText(word.upper())
+            self.word_label.setText("    " + word.upper() + f"  ({round(score, 3)})")
             clues = get_clues_for_word(word, DB_PATH)
             if not clues:
                 self.clues_text.setStyleSheet(
@@ -199,9 +199,14 @@ class WordSortingApp(QWidget):
         if len(words_considered) > _max_words_considered:
             words_considered = words_considered[:_max_words_considered]
 
-        self.words_considered = sort_words_by_score(
-            self.conn, words_considered, 2, "asc"
+
+        word_scores_dict =  sort_words_by_score(
+            self.conn, words_considered, 4
         )
+
+        self.scores_dict = word_scores_dict
+        order = "asc"
+        self.words_considered = sorted([w for w in word_scores_dict.keys()], key=lambda w: word_scores_dict.get(w, 0), reverse=order == "desc")
 
         self.total_words = len(self.words_considered)
         self.word_index = 0  # Pointer into words_considered
@@ -306,7 +311,7 @@ class WordSortingApp(QWidget):
         Loads the next word into the single card.
         """
         next_word = self.get_next_word()
-        self.card.load_word(next_word)
+        self.card.load_word(next_word, self.scores_dict.get(next_word, 0))
         self.update_progress()
 
     def process_card_action(self, card, word, new_status=None):
