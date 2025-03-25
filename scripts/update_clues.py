@@ -13,6 +13,7 @@ import importlib.util
 
 from dotenv import load_dotenv
 
+from wordlist.lib.database import add_clue_to_word, add_clue, get_words_with_no_clues
 from wordlist.utils.printing import c_green, c_yellow, c_end
 
 load_dotenv()
@@ -45,32 +46,13 @@ def update_clues_for_word(conn: sqlite3.Connection, word: str) -> None:
     and, if successful, update both the 'clues' and 'clues_last_updated'
     fields in the 'words' table.
     """
-    c = fetch_clues(word)
-    if c is not None and c.strip():  # only update if clues is not empty
-        cur = conn.cursor()
-        cur.execute(
-            """
-            UPDATE words
-            SET clues = ?,
-                clues_last_updated = datetime('now')
-            WHERE word = ?
-            """,
-            (c, word.upper()),
-        )
-        conn.commit()
+    clues = fetch_clues(word)
+    if clues:  # only update if clues is not empty
+        for c in clues:
+            add_clue(conn, c)
+            add_clue_to_word(conn, word, c)
         return True
     else:
-        # update date anyway
-        cur = conn.cursor()
-        cur.execute(
-            """
-            UPDATE words
-            SET clues_last_updated = datetime('now')
-            WHERE word = ?
-            """,
-            (word.upper(),),
-        )
-        conn.commit()
         return False
 
 
@@ -78,21 +60,10 @@ def main():
     # 1. Connect to DB
     conn = sqlite3.connect(DB_PATH)
 
-    # 2. Get words with missing or empty clues, sorted by `clues_last_updated` (earliest first)
-    cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT word
-        FROM words
-        WHERE clues IS NULL OR clues = ''
-        ORDER BY clues_last_updated ASC
-    """
-    )
-    rows = [row[0] for row in cur.fetchall()]
-
-    found_so_far = 0
+    words_to_check = get_words_with_no_clues(conn)
     # 3. Loop and update each missing word
-    for word in tqdm.tqdm(rows, desc="Updating missing clues"):
+    found_so_far = 0
+    for word in tqdm.tqdm(words_to_check, desc="Updating missing clues"):
         if update_clues_for_word(conn, word):
             tqdm.tqdm.write(
                 f"{c_green}Added{c_end} clues for word '{word}'. Found so far: {found_so_far}"

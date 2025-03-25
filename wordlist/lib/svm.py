@@ -92,15 +92,15 @@ def infer(PKL_MODL, words: List[str]) -> List[Tuple[str, float]]:
     return word_scores_sorted
 
 
-def add_prefix(word: str, clues: str = "") -> str:
-
+def add_prefix(word: str, clues: list[str] = []) -> str:
     prompt = (
         "I am making a wordlist for crossword puzzle constructors. "
         + f"Do you think you would be able to guess this word '{word}' if it was used in a puzzle? "
         + f"Respond NO if you think '{word}' is too obscure and YES if you think '{word}' is common."
     )
     if clues:
-        prompt = prompt + "\n\n" + "Here are some possible clues: " + "\n" + clues
+        clues_out = "\n".join(["- " + c for c in clues])
+        prompt = prompt + "\n\n" + "Here are some possible clues: " + "\n" + clues_out
     return prompt
 
 
@@ -228,7 +228,7 @@ def evaluate_model(
 #  5) Master Train Function
 # ------------------------------------------------------------------------------
 def train_svm(
-    set_1_words_clues: dict[str, str], set_2_words_clues: dict[str, str]
+    set_1_words_clues: dict[str, list[str]], set_2_words_clues: dict[str, list[str]]
 ) -> tuple[SVC, dict]:
     """
     Master function that:
