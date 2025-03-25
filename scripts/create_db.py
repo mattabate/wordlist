@@ -46,13 +46,12 @@ def create_tables(cursor):
     """
     )
 
+    # Updated words table: clues information is now removed
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS words (
             word TEXT PRIMARY KEY NOT NULL,
             time_added TEXT NOT NULL,
-            clues TEXT,
-            clues_last_updated TEXT NOT NULL,
             status TEXT NOT NULL CHECK(status IN ('approved', 'rejected', 'unchecked')),
             status_last_updated TEXT NOT NULL
         );
@@ -68,6 +67,31 @@ def create_tables(cursor):
             datetime_trained TEXT NOT NULL,
             training_duration INT,
             meta TEXT
+        );
+    """
+    )
+
+    # New table for storing unique clues
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS clues (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            clue TEXT UNIQUE,
+            last_seen TEXT
+        );
+    """
+    )
+
+    # New table for storing word-clue relationships
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS clue_usage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            word TEXT,
+            clue_id INTEGER,
+            source TEXT,
+            FOREIGN KEY(word) REFERENCES words(word),
+            FOREIGN KEY(clue_id) REFERENCES clues(id)
         );
     """
     )
