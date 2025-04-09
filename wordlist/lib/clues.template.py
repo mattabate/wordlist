@@ -1,7 +1,7 @@
 """This is where you can define your own function"""
 
 
-def fetch_clues(word: str) -> str | None:
+def fetch_clues(word: str) -> list[str] | None:
     """
     Given a word, return a str containing one or more clues for that word
 

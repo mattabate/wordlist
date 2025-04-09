@@ -18,7 +18,6 @@ import wordlist.lib.database
 from wordlist.utils.json import write_json
 from wordlist.utils.printing import c_red, c_green, c_yellow, c_end
 
-
 load_dotenv()
 
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
@@ -29,6 +28,10 @@ SCORED_WORDLIST_JSON = "outputs/scored_wordlist.json"
 
 
 def main():
+    max_score = 50
+    approvd_min_score = 25
+    rejected_max_score = 10
+    min_score = 0
     # 1. Parse arguments
     parser = argparse.ArgumentParser(
         description="Generate a normalized scored wordlist for a given model."
@@ -40,41 +43,59 @@ def main():
         default=None,
         help="Minimum raw score cutoff to include a word (unless it is approved). If not provided, all words (except rejected ones) are included.",
     )
+    parser.add_argument(
+        "--rescore_source",
+        type=str,
+        default=None,
+        help="Minimum raw score cutoff to include a word (unless it is approved). If not provided, all words (except rejected ones) are included.",
+    )
     args = parser.parse_args()
     model_id = args.model
     min_score_cutoff = args.min_score
+    rescore_source = args.rescore_source
 
     # 2. Connect to DB & fetch scores for this model
     conn = sqlite3.connect(DATABASE_FILE)
     cur = conn.cursor()
 
-    if min_score_cutoff is None:
-        # Include all words (except rejected)
-        cur.execute(
-            """
-            SELECT wms.word, wms.score, w.status
-            FROM word_model_score wms
-            JOIN words w
-                ON wms.word = w.word
-            WHERE wms.model = ?
-            AND w.status != 'rejected'
-            """,
-            (model_id,),
-        )
+    if not rescore_source:
+        cmd = """
+        SELECT wms.word, wms.score, w.status
+        FROM word_model_score wms
+        JOIN words w
+            ON wms.word = w.word
+        WHERE wms.model = ?
+        AND w.status != 'rejected'
+        """
+        if min_score_cutoff is not None:
+            # Include words that are either approved or have a score above the given cutoff
+            cmd += " AND (w.status = 'approved' OR wms.score > ?)"
+            cur.execute(cmd, (model_id, min_score_cutoff))
+        else:
+            # Include all words (except rejected)
+            cur.execute(cmd, (model_id,))
     else:
-        # Include words that are either approved or have a score above the given cutoff
+        # help me figure out what should go here if anything
+        cmd = """
+        SELECT w.word, wms.score, w.status
+        FROM word_model_score wms
+        JOIN words w
+            ON wms.word = w.word
+        JOIN source_word sw
+            ON wms.word = sw.word_id
+        JOIN sources s
+            ON sw.source_id = s.id
+        WHERE wms.model = ? 
+        AND s.name = ?
+        """
         cur.execute(
-            """
-            SELECT wms.word, wms.score, w.status
-            FROM word_model_score wms
-            JOIN words w
-                ON wms.word = w.word
-            WHERE wms.model = ?
-            AND w.status != 'rejected'
-            AND (w.status = 'approved' OR wms.score > ?)
-            """,
-            (model_id, min_score_cutoff),
+            cmd,
+            (
+                model_id,
+                rescore_source,
+            ),
         )
+
     results = cur.fetchall()
     conn.close()
 
@@ -85,13 +106,26 @@ def main():
     # 3. Separate into (word, raw_score)
     #    Sort primarily by score descending, secondarily by word ascending
 
+    rejected_words_and_scores = [
+        (row[0], min(float(row[1]), 2)) for row in results if row[2] == "rejected"
+    ]
+    rejected_words_and_scores.sort(key=lambda x: (-x[1], x[0]))
+    num_rejected_words = len(rejected_words_and_scores)
+    rejected_words_and_scores = [
+        (
+            c[0],
+            rejected_max_score - round(rejected_max_score * (i / num_rejected_words)),
+        )
+        for i, c in enumerate(rejected_words_and_scores)
+    ]
+
     unchecked_words_and_scores = [
         (row[0], min(float(row[1]), 2)) for row in results if row[2] == "unchecked"
     ]
     unchecked_words_and_scores.sort(key=lambda x: (-x[1], x[0]))
     num_unchecked_words = len(unchecked_words_and_scores)
     unchecked_words_and_scores = [
-        (c[0], 50 - round(50 * (i / num_unchecked_words)))
+        (c[0], max_score - round(max_score * (i / num_unchecked_words)))
         for i, c in enumerate(unchecked_words_and_scores)
     ]
     unchecked_words_and_scores.sort(key=lambda x: (-x[1], x[0]))
@@ -107,7 +141,7 @@ def main():
     # scale from 25 - 50
     num_approved_words = len(approved_words_and_scores)
     approved_words_and_scores = [
-        (c[0], 50 - round(25 * (i / num_approved_words)))
+        (c[0], max_score - round(approvd_min_score * (i / num_approved_words)))
         for i, c in enumerate(approved_words_and_scores)
     ]
     approved_words_and_scores.sort(key=lambda x: (-x[1], x[0]))
@@ -118,7 +152,11 @@ def main():
     # scale from 25 - 50
 
     # remove all unchecked words with score < 0
-    words_and_scores = unchecked_words_and_scores + approved_words_and_scores
+    words_and_scores = (
+        rejected_words_and_scores
+        + unchecked_words_and_scores
+        + approved_words_and_scores
+    )
     words_and_scores.sort(key=lambda x: (-x[1], x[0]))
     print()
     print("top 5 words", words_and_scores[:5])

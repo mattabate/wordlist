@@ -169,7 +169,8 @@ class WordCard(QWidget):
                     }
                     """
                 )
-                self.clues_text.setPlainText(clues)
+                clues_formatted = "\n".join(["- " + c for c in clues])
+                self.clues_text.setPlainText(clues_formatted)
 
     def process(self, action):
         """
@@ -199,14 +200,15 @@ class WordSortingApp(QWidget):
         if len(words_considered) > _max_words_considered:
             words_considered = words_considered[:_max_words_considered]
 
-
-        word_scores_dict =  sort_words_by_score(
-            self.conn, words_considered, 4
-        )
+        word_scores_dict = sort_words_by_score(self.conn, words_considered, 4)
 
         self.scores_dict = word_scores_dict
         order = "asc"
-        self.words_considered = sorted([w for w in word_scores_dict.keys()], key=lambda w: word_scores_dict.get(w, 0), reverse=order == "desc")
+        self.words_considered = sorted(
+            [w for w in word_scores_dict.keys()],
+            key=lambda w: word_scores_dict.get(w, 0),
+            reverse=order == "desc",
+        )
 
         self.total_words = len(self.words_considered)
         self.word_index = 0  # Pointer into words_considered

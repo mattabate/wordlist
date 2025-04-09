@@ -13,6 +13,8 @@ from dotenv import load_dotenv
 from wordlist.lib.database import (
     add_or_update_source,
     add_word,
+    add_clue,
+    add_clue_to_word,
     create_source_word,
     get_words,
 )
@@ -23,7 +25,7 @@ load_dotenv()
 
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 DATABASE_FILE = os.getenv("SQLITE_DB_FILE")
-CLUES_SOURCE = os.getenv("CLUES_SOURCE", "wordlist/lib/clues.template.py")
+CLUES_SOURCE = os.getenv("CLUES_SOURCE", "wordlist/lib/clues.py")
 
 
 module_name = os.path.splitext(os.path.basename(CLUES_SOURCE))[0]
@@ -135,7 +137,12 @@ if __name__ == "__main__":
                 + f"Adding {c_yellow}{word}{c_end} to the database. "
                 + f"List score: {my_dict[word]}."
             )
-        add_word(conn, word, clues)
+
+        add_word(conn, word)
+        if clues:
+            for c in clues:
+                add_clue(conn, c)
+                add_clue_to_word(conn, word, c)
 
     # Add all words to this source in DB
     tqdm.tqdm.write(

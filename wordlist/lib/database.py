@@ -13,42 +13,72 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 DATABASE_FILE = os.getenv("SQLITE_DB_FILE")
 
 
-def get_clues_for_word(word: str, db_path: str = DATABASE_FILE) -> str:
+def get_clues_for_word(word: str, db_path: str = DATABASE_FILE) -> list:
     """
-    Returns the clues string from the 'words' table for a given word.
-    If the word is not found or has no clues, returns None.
+    Returns a list of clue strings for the given word by querying the new clue_usage and clues tables.
+    If the word is not found or has no clues, returns an empty list.
     """
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        # Convert the input word to uppercase to match your DB's stored word
-        cursor.execute("SELECT clues FROM words WHERE word = ?", (word.upper(),))
-        row = cursor.fetchone()
-        return row[0] if row else None
+        # Convert input word to uppercase to match stored format.
+        cursor.execute(
+            """
+            SELECT c.clue
+            FROM clue_usage cu
+            JOIN clues c ON cu.clue_id = c.id
+            WHERE cu.word = ?
+            """,
+            (word.upper(),),
+        )
+        rows = cursor.fetchall()
+        return [row[0] for row in rows] if rows else []
     finally:
         conn.close()
 
 
-def get_words_and_clues(conn, status: str = ""):
+def get_words_and_clues(conn, status: str = "") -> dict:
     """
-    Fetches words and their clues from the database filtered by status.
-    If no status is provided, it fetches all words.
+    Fetches words and their associated clues from the database, filtered by status if provided.
+    Returns a dictionary where each key is a word and the value is a list of clue strings.
     """
     cur = conn.cursor()
     if status:
-        query = "SELECT word, clues FROM words WHERE status = ?;"
+        query = """
+            SELECT w.word, c.clue
+            FROM words w
+            LEFT JOIN clue_usage cu ON w.word = cu.word
+            LEFT JOIN clues c ON cu.clue_id = c.id
+            WHERE w.status = ?
+            ORDER BY w.word;
+        """
         cur.execute(query, (status,))
     else:
-        query = "SELECT word, clues FROM words;"
+        query = """
+            SELECT w.word, c.clue
+            FROM words w
+            LEFT JOIN clue_usage cu ON w.word = cu.word
+            LEFT JOIN clues c ON cu.clue_id = c.id
+            ORDER BY w.word;
+        """
         cur.execute(query)
 
     rows = cur.fetchall()
-    return {answer: clues for answer, clues in rows}
+
+    # Build a dictionary mapping word to list of clues.
+    words_dict = {}
+    for word, clue in rows:
+        if word not in words_dict:
+            words_dict[word] = []
+        if clue is not None:
+            words_dict[word].append(clue)
+
+    return words_dict
 
 
 def get_words(conn, status: str = ""):
     """
-    Fetches words and their clues from the database filtered by status.
+    Fetches words from the database filtered by status.
     If no status is provided, it fetches all words.
     """
     cur = conn.cursor()
@@ -61,6 +91,27 @@ def get_words(conn, status: str = ""):
 
     rows = cur.fetchall()
     return [answer for answer, in rows]
+
+
+def get_words_with_no_clues(conn) -> list:
+    """
+    Returns a list of words from the words table that have no associated clues
+    in the clue_usage table.
+    """
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT w.word
+            FROM words w
+            LEFT JOIN clue_usage cu ON w.word = cu.word
+            WHERE cu.clue_id IS NULL
+            """
+        )
+        rows = cursor.fetchall()
+        return [row[0] for row in rows]
+    finally:
+        conn.close()
 
 
 def sort_words_by_score(
@@ -248,36 +299,104 @@ def create_source_word(
             ) from e
 
 
-def add_word(conn: sqlite3.Connection, word: str, clues: str) -> None:
+import sqlite3
+import time
+from wordlist.utils.printing import c_yellow, c_end
+from tqdm import tqdm  # if you use tqdm for logging
+
+DATABASE_FILE = "wordlist.db"
+
+
+def add_word(conn: sqlite3.Connection, word: str) -> None:
     """
-    Adds a word if not present, then returns the SQLite internal rowid.
+    Adds a word into the words table if not already present.
+    The words table now only contains: word, time_added, status, status_last_updated.
     """
     cursor = conn.cursor()
 
-    # Check if the word already exists
-    cursor.execute("SELECT rowid FROM words WHERE word = ?", (word,))
+    # Check if the word already exists (words stored in uppercase)
+    cursor.execute("SELECT rowid FROM words WHERE word = ?", (word.upper(),))
     row = cursor.fetchone()
     if row is not None:
         tqdm.write(
-            f"{c_yellow}Warning:{c_end} Word {word}already exists in the database. Skipping"
+            f"{c_yellow}Warning:{c_end} Word {word} already exists in the database. Skipping."
         )
         return
 
-    # Insert
+    current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+    # Insert into words table without clues columns.
     cursor.execute(
         """
-        INSERT INTO words (word, time_added, clues, clues_last_updated, status, status_last_updated)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """,
-        (
-            word,
-            time.strftime("%Y-%m-%d %H:%M:%S"),
-            clues,  # begining of tim
-            time.strftime("%Y-%m-%d %H:%M:%S"),
-            "unchecked",
-            time.strftime("%Y-%m-%d %H:%M:%S"),
-        ),
+        INSERT INTO words (word, time_added, status, status_last_updated)
+        VALUES (?, ?, ?, ?)
+        """,
+        (word.upper(), current_time, "unchecked", current_time),
     )
+    conn.commit()
+
+
+def add_clue(conn: sqlite3.Connection, clue: str) -> int:
+    """
+    Adds a clue to the clues table if not already present.
+    If the clue exists, updates its last_seen date if needed.
+    Returns the clue's id.
+    """
+    cursor = conn.cursor()
+    current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Check if the clue already exists
+    cursor.execute("SELECT id, last_seen FROM clues WHERE clue = ?", (clue,))
+    row = cursor.fetchone()
+    if row:
+        clue_id, existing_last_seen = row
+        # Update last_seen if the current time is more recent (using lexicographical order for ISO dates)
+        if current_time > existing_last_seen:
+            cursor.execute(
+                "UPDATE clues SET last_seen = ? WHERE id = ?", (current_time, clue_id)
+            )
+            conn.commit()
+        return clue_id
+
+    # Insert new clue
+    cursor.execute(
+        "INSERT INTO clues (clue, last_seen) VALUES (?, ?)", (clue, current_time)
+    )
+    conn.commit()
+    return cursor.lastrowid
+
+
+def add_clue_to_word(conn: sqlite3.Connection, word: str, clue: str) -> None:
+    """
+    Adds an association between a word and a clue in the clue_usage table.
+    - If the clue does not exist, it is added via add_clue().
+    - If the association between the word and clue already exists,
+      updates the clue's last_seen date to the current date.
+    - Otherwise, creates a new association with a blank source.
+    """
+    cursor = conn.cursor()
+    current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+    word_upper = word.upper()
+
+    # Ensure the clue exists and get its id.
+    clue_id = add_clue(conn, clue)
+
+    # Check if an association already exists in clue_usage.
+    cursor.execute(
+        "SELECT id FROM clue_usage WHERE word = ? AND clue_id = ?",
+        (word_upper, clue_id),
+    )
+    row = cursor.fetchone()
+    if row:
+        # Association exists, so update the clue's last_seen date to the current time.
+        cursor.execute(
+            "UPDATE clues SET last_seen = ? WHERE id = ?", (current_time, clue_id)
+        )
+    else:
+        # Create a new association with an empty source.
+        cursor.execute(
+            "INSERT INTO clue_usage (word, clue_id, source) VALUES (?, ?, ?)",
+            (word_upper, clue_id, ""),
+        )
     conn.commit()
 
 

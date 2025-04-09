@@ -3,6 +3,8 @@
 
 **[► Download my Wordlist (TXT)](https://raw.githubusercontent.com/mattabate/wordlist/refs/heads/main/quickstart/matts_wordlist.txt)**
 
+**[► Watch the Demo Video (YouTube)](https://www.youtube.com/watch?v=MpOs1ztzAgw)**
+
 Welcome to my **Puzzle Constructor Wordlist** repository! This project provides a curated collection of words to aid you in creating crossword puzzles and other word-based games. Here you'll find: 
 
 - a free-to-use scored wordlist of [~413,000 words](https://raw.githubusercontent.com/mattabate/wordlist/refs/heads/main/quickstart/matts_wordlist.txt), where the word scores were generated using an [AI / ML model](#1-aiml-scoring-algorithm), and
@@ -235,4 +237,5 @@ This project is distributed under a [Creative Commons Attribution-NonCommercial-
   - [Spread the Word(list)](https://www.spreadthewordlist.com/)
   - [Peter Broda's Wordlist](https://peterbroda.me/crosswords/wordlist/)
 
-- **Contributors**:    Thank you to everyone who has contributed suggestions, code, and feedback.
+- **Contributors**: Thank you to everyone who has contributed suggestions, code, and feedback.  In partiuclar
+  - **John Kugelman**, who reached out with his [wordlist](https://github.com/jkugelman/crossword/blob/main/wordlists/jkugelman-wordlist.txt)  and [clues](https://github.com/jkugelman/crossword/blob/main/wordlists/jkugelman-clues.txt) to incorperate.

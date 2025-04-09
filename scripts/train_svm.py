@@ -27,6 +27,9 @@ if __name__ == "__main__":
         approved = get_words_and_clues(conn=conn, status="approved")
         rejected = get_words_and_clues(conn=conn, status="rejected")
 
+        approved = {w: "\n".join("- " + c for c in approved[w]) for w in approved}
+        rejected = {w: "\n".join("- " + c for c in rejected[w]) for w in rejected}
+
     except Exception as e:
         print(f"{c_red}Error:{c_end} {e}")
         conn.rollback()
