@@ -11,7 +11,6 @@ import pickle
 import sqlite3
 import time
 import tqdm
-import yaml
 
 from dotenv import load_dotenv
 
