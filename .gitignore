@@ -13,6 +13,11 @@ poetry.lock
 *db
 *.db-journal
 
+# Trained models, anywhere — not just /models/. .gitattributes sends *.pkl to
+# Git LFS, and LFS storage is never reclaimed: the predecessor repo kept a
+# 217 MB pickle at scripts/models/ and that copy is billed forever.
+*.pkl
+
 /inputs/*
 !/inputs/_DIR_EXISTS/
 /outputs/*
